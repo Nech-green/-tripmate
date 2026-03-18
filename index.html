@@ -210,8 +210,8 @@ function IForm(props){
     {d.type==="hotel" && <div style={{background:"#A855F712",borderRadius:10,padding:10,marginBottom:11}}>
       <div style={{fontSize:11,fontWeight:700,color:"#A855F7",marginBottom:6}}>🏨 {t.ty.hotel}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld l={t.checkIn} ch={<Inp type="time" value={d.checkInTime||""} onChange={function(e){s("checkInTime",e.target.value);}} />} />
-        <Fld l={t.checkOut} ch={<Inp type="time" value={d.checkOutTime||""} onChange={function(e){s("checkOutTime",e.target.value);}} />} />
+        <Fld l={t.checkIn+" 📅"} ch={<Inp type="date" value={d.checkInDate||""} onChange={function(e){s("checkInDate",e.target.value);}} />} />
+        <Fld l={t.checkOut+" 📅"} ch={<Inp type="date" value={d.checkOutDate||""} onChange={function(e){s("checkOutDate",e.target.value);}} />} />
       </div>
     </div>}
 
@@ -239,6 +239,26 @@ function IForm(props){
 
     <Fld l={t.notes} ch={<textarea value={d.notes} onChange={function(e){s("notes",e.target.value);}} style={Object.assign({},IS,{minHeight:50})} />} />
 
+    {/* Documents & Photos */}
+    <Fld l={"📎 "+t.upload+" ("+ln.replace("he","מסמכים / תמונות").replace("en","Documents / Photos")+")"} ch={<div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
+        {(d.files||[]).map(function(f,fi){return <span key={fi} style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",borderRadius:6,background:"var(--sf)",border:"1px solid var(--bd)",fontSize:9}}>
+          {f.type==="image"?"🖼️":"📄"} {(f.name||"file").slice(0,15)}
+          <button onClick={function(){var nf=(d.files||[]).slice();nf.splice(fi,1);s("files",nf);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",padding:0,fontSize:10}}>✕</button>
+        </span>;})}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <label style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"7px 10px",borderRadius:8,border:"2px dashed var(--bd)",background:"transparent",color:"var(--mt)",cursor:"pointer",fontSize:10,fontWeight:600}}>
+          📄 {ln==="he"?"מסמך":"Doc"}
+          <input type="file" accept=".pdf,.doc,.docx,.txt" style={{display:"none"}} onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var nf=(d.files||[]).slice();nf.push({name:f.name,type:"doc",size:f.size});s("files",nf);e.target.value="";}} />
+        </label>
+        <label style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"7px 10px",borderRadius:8,border:"2px dashed var(--bd)",background:"transparent",color:"var(--mt)",cursor:"pointer",fontSize:10,fontWeight:600}}>
+          📷 {ln==="he"?"תמונה":"Photo"}
+          <input type="file" accept="image/*" style={{display:"none"}} onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var nf=(d.files||[]).slice();nf.push({name:f.name,type:"image",size:f.size});s("files",nf);e.target.value="";}} />
+        </label>
+      </div>
+    </div>} />
+
     <div style={{display:"flex",gap:6,marginTop:8}}>
       <Bt ch={"✓ "+t.save} fn={function(){props.onSave(d);}} st={{flex:1,justifyContent:"center"}} />
       {props.isEd&&props.onDel && <Bt vr="danger" ch="🗑" fn={props.onDel} />}
@@ -250,12 +270,17 @@ function IForm(props){
 // ── Mock ──
 function mock(){return{id:"t1",name:"טיול יוון 2026",nameEn:"Greece 2026",sd:"2026-06-15",ed:"2026-06-22",inv:"GR2026",budget:20000,
 mems:{u1:{id:"u1",uid:"",name:"יונתן",nameEn:"Yonatan",av:"Y",c:"#4F8CFF"},u2:{id:"u2",uid:"",name:"נועה",nameEn:"Noa",av:"N",c:"#FF6B8A"},u3:{id:"u3",uid:"",name:"אורי",nameEn:"Ori",av:"O",c:"#36D6A0"},u4:{id:"u4",uid:"",name:"מאיה",nameEn:"Maya",av:"M",c:"#FFB347"}},
-cl:{c0:{id:"c0",text:"דרכון",textEn:"Passport",cat:"documents",qty:1,ck:{}},c1:{id:"c1",text:"ביטוח נסיעות",textEn:"Insurance",cat:"documents",qty:1,ck:{}},c2:{id:"c2",text:"מטען יד",textEn:"Carry-on",cat:"misc",qty:1,ck:{}},c3:{id:"c3",text:"שקע/מתאם",textEn:"Adapter",cat:"electronics",qty:1,ck:{}},c4:{id:"c4",text:"תרופות",textEn:"Meds",cat:"health",qty:1,ck:{}},c5:{id:"c5",text:"חולצות",textEn:"T-shirts",cat:"clothing",qty:7,ck:{}},c6:{id:"c6",text:"מכנסיים",textEn:"Pants",cat:"clothing",qty:3,ck:{}},c7:{id:"c7",text:"קרם הגנה",textEn:"Sunscreen",cat:"toiletries",qty:1,ck:{}}},
+cl:{c0:{id:"c0",text:"דרכון",textEn:"Passport",cat:"documents",qty:1,ck:{}},c1:{id:"c1",text:"ביטוח נסיעות",textEn:"Travel Insurance",cat:"documents",qty:1,ck:{}},c2:{id:"c2",text:"כרטיסי טיסה",textEn:"Flight Tickets",cat:"documents",qty:1,ck:{}},c3:{id:"c3",text:"הזמנות מלון",textEn:"Hotel Bookings",cat:"documents",qty:1,ck:{}},c4:{id:"c4",text:"צילום דרכון",textEn:"Passport Copy",cat:"documents",qty:1,ck:{}},
+c10:{id:"c10",text:"חולצות",textEn:"T-shirts",cat:"clothing",qty:7,ck:{}},c11:{id:"c11",text:"מכנסיים",textEn:"Pants",cat:"clothing",qty:3,ck:{}},c12:{id:"c12",text:"תחתונים",textEn:"Underwear",cat:"clothing",qty:7,ck:{}},c13:{id:"c13",text:"גרביים",textEn:"Socks",cat:"clothing",qty:7,ck:{}},c14:{id:"c14",text:"בגד ים",textEn:"Swimsuit",cat:"clothing",qty:2,ck:{}},c15:{id:"c15",text:"נעלי הליכה",textEn:"Walking Shoes",cat:"clothing",qty:1,ck:{}},c16:{id:"c16",text:"כפכפים",textEn:"Flip Flops",cat:"clothing",qty:1,ck:{}},c17:{id:"c17",text:"ז'קט/קפוצ'ון",textEn:"Jacket/Hoodie",cat:"clothing",qty:1,ck:{}},
+c20:{id:"c20",text:"משחת שיניים",textEn:"Toothpaste",cat:"toiletries",qty:1,ck:{}},c21:{id:"c21",text:"מברשת שיניים",textEn:"Toothbrush",cat:"toiletries",qty:1,ck:{}},c22:{id:"c22",text:"שמפו",textEn:"Shampoo",cat:"toiletries",qty:1,ck:{}},c23:{id:"c23",text:"קרם הגנה",textEn:"Sunscreen",cat:"toiletries",qty:1,ck:{}},c24:{id:"c24",text:"דאודורנט",textEn:"Deodorant",cat:"toiletries",qty:1,ck:{}},
+c30:{id:"c30",text:"מטען טלפון",textEn:"Phone Charger",cat:"electronics",qty:1,ck:{}},c31:{id:"c31",text:"שקע/מתאם",textEn:"Power Adapter",cat:"electronics",qty:1,ck:{}},c32:{id:"c32",text:"אוזניות",textEn:"Headphones",cat:"electronics",qty:1,ck:{}},c33:{id:"c33",text:"פאוור בנק",textEn:"Power Bank",cat:"electronics",qty:1,ck:{}},
+c40:{id:"c40",text:"תרופות קבועות",textEn:"Regular Meds",cat:"health",qty:1,ck:{}},c41:{id:"c41",text:"אקמול",textEn:"Painkillers",cat:"health",qty:1,ck:{}},c42:{id:"c42",text:"פלסטרים",textEn:"Band-aids",cat:"health",qty:1,ck:{}},
+c50:{id:"c50",text:"מטען יד",textEn:"Carry-on",cat:"misc",qty:1,ck:{}},c51:{id:"c51",text:"מזוודה",textEn:"Suitcase",cat:"misc",qty:1,ck:{}},c52:{id:"c52",text:"כסף מקומי",textEn:"Local Currency",cat:"misc",qty:1,ck:{}},c53:{id:"c53",text:"מפות אופליין",textEn:"Offline Maps",cat:"misc",qty:1,ck:{}}},
 wl:{w1:{id:"w1",title:"מטאורה",titleEn:"Meteora",location:"Meteora",lat:39.7217,lng:21.6308,type:"attraction",notes:"מנזרים"}},
 emergency:{police:"100",ambulance:"166",embassy:"+30-210-7257-400",insurance:"*4000"},
-itin:{d0:{dn:1,dt:"2026-06-15",items:{i1:{id:"i1",type:"flight",title:"טיסה לאתונה",titleEn:"Flight",time:"06:30",endTime:"10:15",location:"Athens Airport",lat:37.9364,lng:23.9445,notes:"Aegean",flightNum:"A3 921",tzOrigin:"Asia/Jerusalem",tzDest:"Europe/Athens",terminal:"T3",gate:"B7",price:1200,priceCur:"ILS"},i2:{id:"i2",type:"hotel",title:"מלון פלאקה",titleEn:"Plaka Hotel",time:"14:00",endTime:"",location:"Plaka, Athens",lat:37.9747,lng:23.7279,notes:"AthenStyle",checkInTime:"14:00",checkOutTime:"11:00",price:80,priceCur:"EUR"},i3:{id:"i3",type:"attraction",title:"אקרופוליס",titleEn:"Acropolis",time:"16:00",endTime:"18:30",location:"Acropolis",lat:37.9715,lng:23.7257,notes:"כרטיסים מראש!",price:20,priceCur:"EUR"}}},
+itin:{d0:{dn:1,dt:"2026-06-15",items:{i1:{id:"i1",type:"flight",title:"טיסה לאתונה",titleEn:"Flight",time:"06:30",endTime:"10:15",location:"Athens Airport",lat:37.9364,lng:23.9445,notes:"Aegean",flightNum:"A3 921",tzOrigin:"Asia/Jerusalem",tzDest:"Europe/Athens",terminal:"T3",gate:"B7",price:1200,priceCur:"ILS"},i2:{id:"i2",type:"hotel",title:"מלון פלאקה",titleEn:"Plaka Hotel",time:"14:00",endTime:"",location:"Plaka, Athens",lat:37.9747,lng:23.7279,notes:"AthenStyle",checkInDate:"2026-06-15",checkOutDate:"2026-06-17",price:80,priceCur:"EUR"},i3:{id:"i3",type:"attraction",title:"אקרופוליס",titleEn:"Acropolis",time:"16:00",endTime:"18:30",location:"Acropolis",lat:37.9715,lng:23.7257,notes:"כרטיסים מראש!",price:20,priceCur:"EUR"}}},
 d1:{dn:2,dt:"2026-06-16",items:{i4:{id:"i4",type:"transport",title:"מעבורת לסנטוריני",titleEn:"Ferry",time:"15:00",endTime:"20:00",transportSub:"ferry",fromLocation:"Piraeus Port",fromLat:37.9485,fromLng:23.6431,toLocation:"Santorini Port",toLat:36.4035,toLng:25.4447,location:"Piraeus → Santorini",lat:37.9485,lng:23.6431,notes:"Blue Star",price:60,priceCur:"EUR"}}},
-d2:{dn:3,dt:"2026-06-17",items:{i5:{id:"i5",type:"hotel",title:"וילה באויה",titleEn:"Oia Villa",time:"",endTime:"",location:"Oia, Santorini",lat:36.4618,lng:25.3753,notes:"נוף לקלדרה",checkInTime:"15:00",checkOutTime:"11:00",price:150,priceCur:"EUR"}}}},
+d2:{dn:3,dt:"2026-06-17",items:{i5:{id:"i5",type:"hotel",title:"וילה באויה",titleEn:"Oia Villa",time:"",endTime:"",location:"Oia, Santorini",lat:36.4618,lng:25.3753,notes:"נוף לקלדרה",checkInDate:"2026-06-17",checkOutDate:"2026-06-22",price:150,priceCur:"EUR"}}}},
 exps:{e1:{id:"e1",desc:"טיסות",descEn:"Flights",amount:4800,currency:"ILS",paidBy:"u1",splitBetween:["u1","u2","u3","u4"],date:"2026-06-15",category:"flight",scope:"shared"},e2:{id:"e2",desc:"מלון אתונה",descEn:"Hotel",amount:320,currency:"EUR",paidBy:"u2",splitBetween:["u1","u2","u3","u4"],date:"2026-06-15",category:"hotel",scope:"shared"}}
 };}
 
@@ -292,7 +317,16 @@ function App(){
   function createTrip(f){
     var tid=xid();var inv=Math.random().toString(36).substr(2,6).toUpperCase();
     var days=daysFromRange(f.sd,f.ed);var itin={};days.forEach(function(d,i){itin["d"+i]=d;});
-    var cl={};L.he.cl.forEach(function(c,i){cl["c"+i]={id:"c"+i,text:c,textEn:L.en.cl[i],cat:"misc",qty:1,ck:{}};});
+    var cl={};
+    var defCl=[
+      {t:"דרכון",e:"Passport",c:"documents"},{t:"ביטוח נסיעות",e:"Travel Insurance",c:"documents"},{t:"כרטיסי טיסה",e:"Flight Tickets",c:"documents"},{t:"הזמנות מלון",e:"Hotel Bookings",c:"documents"},{t:"צילום דרכון",e:"Passport Copy",c:"documents"},
+      {t:"חולצות",e:"T-shirts",c:"clothing",q:7},{t:"מכנסיים",e:"Pants",c:"clothing",q:3},{t:"תחתונים",e:"Underwear",c:"clothing",q:7},{t:"גרביים",e:"Socks",c:"clothing",q:7},{t:"בגד ים",e:"Swimsuit",c:"clothing",q:2},{t:"נעלי הליכה",e:"Walking Shoes",c:"clothing"},{t:"כפכפים",e:"Flip Flops",c:"clothing"},{t:"ז'קט",e:"Jacket",c:"clothing"},
+      {t:"משחת שיניים",e:"Toothpaste",c:"toiletries"},{t:"מברשת שיניים",e:"Toothbrush",c:"toiletries"},{t:"שמפו",e:"Shampoo",c:"toiletries"},{t:"קרם הגנה",e:"Sunscreen",c:"toiletries"},{t:"דאודורנט",e:"Deodorant",c:"toiletries"},
+      {t:"מטען טלפון",e:"Phone Charger",c:"electronics"},{t:"שקע/מתאם",e:"Adapter",c:"electronics"},{t:"אוזניות",e:"Headphones",c:"electronics"},{t:"פאוור בנק",e:"Power Bank",c:"electronics"},
+      {t:"תרופות",e:"Medications",c:"health"},{t:"אקמול",e:"Painkillers",c:"health"},{t:"פלסטרים",e:"Band-aids",c:"health"},
+      {t:"מטען יד",e:"Carry-on",c:"misc"},{t:"מזוודה",e:"Suitcase",c:"misc"},{t:"כסף מקומי",e:"Local Currency",c:"misc"},{t:"מפות אופליין",e:"Offline Maps",c:"misc"}
+    ];
+    defCl.forEach(function(item,i){var cid="c"+i;cl[cid]={id:cid,text:item.t,textEn:item.e,cat:item.c,qty:item.q||1,ck:{}};});
     var memId=xid();var td={id:tid,name:f.name||"טיול",nameEn:f.nameEn||"Trip",sd:f.sd||"2026-01-01",ed:f.ed||"",inv:inv,budget:0,mems:{},itin:itin,exps:{},wl:{},cl:cl,emergency:{police:"",ambulance:"",embassy:"",insurance:""}};
     td.mems[memId]={id:memId,uid:myUid,name:myName,nameEn:myName,av:myName.charAt(0).toUpperCase(),c:MCOL[0]};
     fbDB.ref("trips/"+tid).set(td);
@@ -391,6 +425,7 @@ function TripView(props){
   var _cvAmt=useState(""),cvAmt=_cvAmt[0],setCvAmt=_cvAmt[1];
   var _cvFrom=useState("EUR"),cvFrom=_cvFrom[0],setCvFrom=_cvFrom[1];
   var _cvTo=useState("ILS"),cvTo=_cvTo[0],setCvTo=_cvTo[1];
+  var _cvRates=useState({ILS:1,EUR:4.05,USD:3.65,GBP:4.68,THB:0.1,JPY:0.024,TRY:0.11}),cvRates=_cvRates[0],setCvRates=_cvRates[1];
 
   function updF(path,val){fbDB.ref("trips/"+aId+"/"+path).set(val);}
 
@@ -489,8 +524,8 @@ function TripView(props){
             <p style={{fontSize:13,fontWeight:700,color:"var(--txt)",margin:"0 0 2px"}}>{ln==="he"?it.title:it.titleEn||it.title}</p>
             <p style={{fontSize:10,color:"var(--mt)",margin:0}}>📍 {it.location||""}</p>
             {it.flightNum && <span style={{fontSize:9,fontWeight:700,color:CLR.flight,background:CLR.flight+"15",padding:"1px 6px",borderRadius:4,display:"inline-block",marginTop:3}}>{it.flightNum}{it.terminal?" · T"+it.terminal:""}{it.gate?" · Gate "+it.gate:""}</span>}
-            {it.checkInTime && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3,marginRight:6}}>🔑 {t.checkIn}: {it.checkInTime}</span>}
-            {it.checkOutTime && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3}}>🚪 {t.checkOut}: {it.checkOutTime}</span>}
+            {it.checkInDate && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3,marginRight:6}}>🔑 {t.checkIn}: {it.checkInDate}</span>}
+            {it.checkOutDate && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3}}>🚪 {t.checkOut}: {it.checkOutDate}</span>}
             {it.transportSub && it.fromLocation && <p style={{fontSize:9,color:"var(--warn)",marginTop:3}}>{it.fromLocation} → {it.toLocation||""}</p>}
           </div>;
         })}
@@ -665,14 +700,30 @@ function TripView(props){
         <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:"0 0 12px"}}>💱 {t.converter}</h2>
         <Fld l={t.amount} ch={<Inp type="number" value={cvAmt} onChange={function(e){setCvAmt(e.target.value);}} style={{fontSize:18,fontWeight:700,textAlign:"center"}} />} />
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-          <Fld l={"From"} ch={<Sel v={cvFrom} fn={function(e){setCvFrom(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
-          <Fld l={"To"} ch={<Sel v={cvTo} fn={function(e){setCvTo(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
+          <Fld l={ln==="he"?"מ-":"From"} ch={<Sel v={cvFrom} fn={function(e){setCvFrom(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
+          <Fld l={ln==="he"?"ל-":"To"} ch={<Sel v={cvTo} fn={function(e){setCvTo(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
         </div>
-        {cvAmt && <div style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:16,textAlign:"center"}}>
+        {cvAmt && <div style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:16,textAlign:"center",marginBottom:12}}>
           <p style={{fontSize:12,color:"var(--mt)",margin:"0 0 4px"}}>{t.result}</p>
-          <p style={{fontSize:28,fontWeight:800,color:"var(--ac)",margin:0}}>{money(Math.round(parseFloat(cvAmt)*toI(1,cvFrom)/toI(1,cvTo)*100)/100,cvTo)}</p>
-          <p style={{fontSize:10,color:"var(--mt)",marginTop:4}}>{t.rate}: 1 {cvFrom} = {(toI(1,cvFrom)/toI(1,cvTo)).toFixed(4)} {cvTo}</p>
+          <p style={{fontSize:28,fontWeight:800,color:"var(--ac)",margin:0}}>{money(Math.round(parseFloat(cvAmt)*(cvRates[cvFrom]||1)/(cvRates[cvTo]||1)*100)/100,cvTo)}</p>
+          <p style={{fontSize:10,color:"var(--mt)",marginTop:4}}>{t.rate}: 1 {cvFrom} = {((cvRates[cvFrom]||1)/(cvRates[cvTo]||1)).toFixed(4)} {cvTo}</p>
         </div>}
+        <div style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <p style={{fontSize:12,fontWeight:700,color:"var(--txt)",margin:0}}>{ln==="he"?"שערי חליפין (ל-₪)":"Exchange Rates (to ₪)"}</p>
+            <button onClick={function(){
+              fetch("https://api.exchangerate-api.com/v4/latest/ILS").then(function(r){return r.json();}).then(function(data){
+                if(data&&data.rates){var nr=Object.assign({},cvRates);CURS.forEach(function(c){if(data.rates[c])nr[c]=1/data.rates[c];});setCvRates(nr);}
+              }).catch(function(){});
+            }} style={{background:"var(--acS)",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer",color:"var(--ac)",fontSize:9,fontWeight:600}}>🔄 {ln==="he"?"עדכן":"Update"}</button>
+          </div>
+          {CURS.map(function(c){return <div key={c} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+            <span style={{fontSize:11,fontWeight:600,color:"var(--txt)",width:35}}>{c}</span>
+            <span style={{fontSize:10,color:"var(--mt)"}}>=</span>
+            <input type="number" step="0.01" value={cvRates[c]||""} onChange={function(e){var nr=Object.assign({},cvRates);nr[c]=parseFloat(e.target.value)||0;setCvRates(nr);}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:"1px solid var(--bd)",background:"var(--sf)",color:"var(--txt)",fontSize:11,boxSizing:"border-box"}} />
+            <span style={{fontSize:10,color:"var(--mt)"}}>₪</span>
+          </div>;})}
+        </div>
       </div>}
 
     </main>
