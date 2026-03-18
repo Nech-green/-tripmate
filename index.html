@@ -427,6 +427,115 @@ function TripView(props){
   var _cvTo=useState("ILS"),cvTo=_cvTo[0],setCvTo=_cvTo[1];
   var _cvRates=useState({ILS:1,EUR:4.05,USD:3.65,GBP:4.68,THB:0.1,JPY:0.024,TRY:0.11}),cvRates=_cvRates[0],setCvRates=_cvRates[1];
 
+  // Google Drive Photos
+  var _gToken=useState(null),gToken=_gToken[0],setGToken=_gToken[1];
+  var _gPhotos=useState([]),gPhotos=_gPhotos[0],setGPhotos=_gPhotos[1];
+  var _gFolder=useState(null),gFolder=_gFolder[0],setGFolder=_gFolder[1];
+  var _gLoading=useState(false),gLoading=_gLoading[0],setGLoading=_gLoading[1];
+  var _gUploading=useState(false),gUploading=_gUploading[0],setGUploading=_gUploading[1];
+  var GCID="1091307563589-esjbrkmridcuk9qmj0rb7io7b28ctsek.apps.googleusercontent.com";
+
+  function gDriveAuth(){
+    var client=google.accounts.oauth2.initTokenClient({
+      client_id:GCID,
+      scope:"https://www.googleapis.com/auth/drive.file",
+      callback:function(resp){
+        if(resp.access_token){
+          setGToken(resp.access_token);
+          loadOrCreateFolder(resp.access_token);
+        }
+      }
+    });
+    client.requestAccessToken();
+  }
+
+  function loadOrCreateFolder(token){
+    setGLoading(true);
+    var folderName="TripMate - "+(trip.name||trip.nameEn||"Trip");
+    // Check if folder ID is saved in trip
+    var savedFolderId=trip.driveFolderId||null;
+    if(savedFolderId){
+      loadPhotosFromFolder(token,savedFolderId);
+      setGFolder(savedFolderId);
+      return;
+    }
+    // Search for existing folder
+    fetch("https://www.googleapis.com/drive/v3/files?q=name%3D%27"+encodeURIComponent(folderName)+"%27+and+mimeType%3D%27application/vnd.google-apps.folder%27+and+trashed%3Dfalse&fields=files(id,name)",{
+      headers:{"Authorization":"Bearer "+token}
+    }).then(function(r){return r.json();}).then(function(data){
+      if(data.files&&data.files.length>0){
+        var fid=data.files[0].id;
+        setGFolder(fid);
+        updF("driveFolderId",fid);
+        loadPhotosFromFolder(token,fid);
+      } else {
+        // Create folder
+        fetch("https://www.googleapis.com/drive/v3/files",{
+          method:"POST",
+          headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+          body:JSON.stringify({name:folderName,mimeType:"application/vnd.google-apps.folder"})
+        }).then(function(r){return r.json();}).then(function(f){
+          if(f.id){
+            setGFolder(f.id);
+            updF("driveFolderId",f.id);
+            // Make it accessible by link
+            fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"/permissions",{
+              method:"POST",
+              headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+              body:JSON.stringify({role:"writer",type:"anyone"})
+            }).catch(function(){});
+            setGPhotos([]);
+          }
+          setGLoading(false);
+        });
+      }
+    }).catch(function(){setGLoading(false);});
+  }
+
+  function loadPhotosFromFolder(token,folderId){
+    fetch("https://www.googleapis.com/drive/v3/files?q=%27"+folderId+"%27+in+parents+and+trashed%3Dfalse+and+mimeType+contains+%27image%27&fields=files(id,name,thumbnailLink,webContentLink,webViewLink,createdTime)&orderBy=createdTime+desc&pageSize=50",{
+      headers:{"Authorization":"Bearer "+token}
+    }).then(function(r){return r.json();}).then(function(data){
+      setGPhotos(data.files||[]);
+      setGLoading(false);
+    }).catch(function(){setGLoading(false);});
+  }
+
+  function uploadPhoto(file){
+    if(!gToken||!gFolder||!file)return;
+    setGUploading(true);
+    var metadata=JSON.stringify({name:file.name,parents:[gFolder]});
+    var form=new FormData();
+    form.append("metadata",new Blob([metadata],{type:"application/json"}));
+    form.append("file",file);
+    fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,thumbnailLink,webContentLink,webViewLink,createdTime",{
+      method:"POST",
+      headers:{"Authorization":"Bearer "+gToken},
+      body:form
+    }).then(function(r){return r.json();}).then(function(f){
+      if(f.id){
+        // Make file accessible
+        fetch("https://www.googleapis.com/drive/v3/files/"+f.id+"/permissions",{
+          method:"POST",
+          headers:{"Authorization":"Bearer "+gToken,"Content-Type":"application/json"},
+          body:JSON.stringify({role:"reader",type:"anyone"})
+        }).catch(function(){});
+        setGPhotos(function(prev){return [f].concat(prev);});
+      }
+      setGUploading(false);
+    }).catch(function(){setGUploading(false);});
+  }
+
+  // Load Google Identity Services
+  useEffect(function(){
+    if(document.getElementById("gis-script"))return;
+    var s=document.createElement("script");
+    s.id="gis-script";
+    s.src="https://accounts.google.com/gsi/client";
+    s.async=true;
+    document.head.appendChild(s);
+  },[]);
+
   function updF(path,val){fbDB.ref("trips/"+aId+"/"+path).set(val);}
 
   var mems=objArr(trip.mems||{});
@@ -484,7 +593,7 @@ function TripView(props){
           <p style={{fontSize:11,opacity:.6,margin:0,color:"#fff"}}>{t.grpB}: {money(Math.round(totS),"ILS")}</p>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginBottom:16}}>
-          {[{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"more",e:"👥",l:t.grp},{k:"wishlist",e:"❤️",l:t.wish},{k:"checklist",e:"✅",l:t.chk}].map(function(a){return <button key={a.k} onClick={function(){setTab(a.k);}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:"10px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{a.e}</span><span style={{fontSize:10,fontWeight:600,color:"var(--txt)"}}>{a.l}</span></button>;})}
+          {[{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"photos",e:"📷",l:ln==="he"?"תמונות":"Photos"},{k:"more",e:"👥",l:t.grp},{k:"checklist",e:"✅",l:t.chk}].map(function(a){return <button key={a.k} onClick={function(){setTab(a.k);}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:"10px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{a.e}</span><span style={{fontSize:10,fontWeight:600,color:"var(--txt)"}}>{a.l}</span></button>;})}
         </div>
         {itin.length>0 && <div>
           <h3 style={{fontSize:14,fontWeight:700,color:"var(--txt)",margin:"0 0 8px"}}>{t.day} 1 — {(itin[0]||{}).dt||""}</h3>
@@ -547,6 +656,58 @@ function TripView(props){
         </div>
         <GMap pts={mPts} ln={ln} />
         <div style={{marginTop:10}}>{mPts.map(function(p,i){if(!p)return null;return <div key={(p.id||"")+i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 0",borderBottom:"1px solid var(--bd)"}}><span style={{width:22,height:22,borderRadius:"50%",background:p.isW?"#E84393":(CLR[p.type]||"#888"),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{p.isW?"♥":i+1}</span><div style={{flex:1}}><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?p.title:p.titleEn||p.title}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{p.location||""}</p></div>{p.price>0 && <span style={{fontSize:9,fontWeight:700,color:"var(--ok)"}}>{money(p.price,p.priceCur||"ILS")}</span>}</div>;})}</div>
+      </div>}
+
+      {/* ═══ PHOTOS (Google Drive) ═══ */}
+      {tab==="photos" && <div>
+        <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:"0 0 12px"}}>📷 {ln==="he"?"גלריית טיול":"Trip Gallery"}</h2>
+
+        {!gToken && <div style={{textAlign:"center",padding:30}}>
+          <p style={{fontSize:40,marginBottom:12}}>📸</p>
+          <p style={{color:"var(--mt)",marginBottom:16,fontSize:13}}>{ln==="he"?"התחבר לגוגל דרייב כדי לשתף תמונות עם כל חברי הטיול":"Connect Google Drive to share photos with your trip group"}</p>
+          <Bt ch={ln==="he"?"🔗 התחבר לגוגל דרייב":"🔗 Connect Google Drive"} fn={gDriveAuth} st={{padding:"12px 24px",fontSize:14}} />
+          <p style={{fontSize:10,color:"var(--mt)",marginTop:12}}>{ln==="he"?"התמונות נשמרות בתיקייה משותפת בדרייב שלך":"Photos are saved in a shared folder on your Drive"}</p>
+        </div>}
+
+        {gToken && <div>
+          {/* Upload button */}
+          <label style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:14,borderRadius:12,border:"2px dashed var(--bd)",background:"var(--sf)",cursor:"pointer",marginBottom:14,opacity:gUploading?0.5:1}}>
+            <span style={{fontSize:20}}>📷</span>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--ac)"}}>{gUploading?(ln==="he"?"מעלה...":"Uploading..."):(ln==="he"?"העלה תמונה":"Upload Photo")}</span>
+            <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={function(e){
+              var files=e.target.files;
+              if(!files)return;
+              for(var i=0;i<files.length;i++){uploadPhoto(files[i]);}
+              e.target.value="";
+            }} disabled={gUploading} />
+          </label>
+
+          {/* Folder link */}
+          {gFolder && <a href={"https://drive.google.com/drive/folders/"+gFolder} target="_blank" rel="noopener" style={{display:"block",textAlign:"center",fontSize:11,color:"var(--ac)",marginBottom:14,textDecoration:"none"}}>📂 {ln==="he"?"פתח תיקייה בדרייב":"Open Drive Folder"}</a>}
+
+          {gLoading && <div style={{textAlign:"center",padding:20}}><div style={{width:24,height:24,border:"3px solid var(--bd)",borderTopColor:"var(--ac)",borderRadius:"50%",animation:"spin .6s linear infinite",margin:"0 auto"}} /></div>}
+
+          {/* Photo grid */}
+          {!gLoading && gPhotos.length===0 && <p style={{textAlign:"center",padding:20,color:"var(--mt)"}}>{ln==="he"?"אין תמונות עדיין — העלו את הראשונה! 📸":"No photos yet — upload the first one! 📸"}</p>}
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+            {gPhotos.map(function(photo){
+              var thumb=photo.thumbnailLink||(photo.id?"https://drive.google.com/thumbnail?id="+photo.id+"&sz=w300":"");
+              var viewUrl=photo.webViewLink||("https://drive.google.com/file/d/"+photo.id+"/view");
+              var dlUrl=photo.webContentLink||("https://drive.google.com/uc?export=download&id="+photo.id);
+              return <div key={photo.id} style={{position:"relative",borderRadius:10,overflow:"hidden",background:"var(--sf)",aspectRatio:"1"}}>
+                <a href={viewUrl} target="_blank" rel="noopener">
+                  <img src={thumb} alt={photo.name||""} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+                </a>
+                <a href={dlUrl} target="_blank" rel="noopener" style={{position:"absolute",bottom:4,right:4,width:24,height:24,borderRadius:6,background:"rgba(0,0,0,.5)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",fontSize:12}}>⬇</a>
+                <p style={{position:"absolute",bottom:4,left:4,fontSize:7,color:"#fff",background:"rgba(0,0,0,.4)",padding:"1px 4px",borderRadius:3,margin:0}}>{(photo.name||"").slice(0,12)}</p>
+              </div>;
+            })}
+          </div>
+
+          {/* Refresh */}
+          {gPhotos.length>0 && <button onClick={function(){if(gToken&&gFolder)loadPhotosFromFolder(gToken,gFolder);}} style={{display:"block",margin:"14px auto 0",background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontSize:11,color:"var(--ac)",fontWeight:600}}>🔄 {ln==="he"?"רענן תמונות":"Refresh"}</button>}
+        </div>}
       </div>}
 
       {/* ═══ EXPENSES ═══ */}
