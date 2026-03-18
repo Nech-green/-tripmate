@@ -14,12 +14,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F3F4F8;--sf:#E9EAF0;--card:#fff;--nav:rgba(255,255,255,.96);--bd:#DCDEE6;--txt:#1A1D26;--txt2:#4A4E5A;--mt:#8A8FA3;--ac:#1B3A6B;--acS:rgba(27,58,107,.08);--cta:#FF6B34;--gA:#1B3A6B;--gB:#2D5AA0}
-@media(prefers-color-scheme:dark){:root{--bg:#0D0F14;--sf:#171A23;--card:#1C1F2E;--nav:rgba(28,31,46,.96);--bd:#2A2D3A;--txt:#EAECF0;--txt2:#B0B4C0;--mt:#6E7286;--ac:#6BA3FF;--acS:rgba(107,163,255,.1);--cta:#FF7B4A;--gA:#162D52;--gB:#1E4480}}
+:root{--bg:#F3F4F8;--sf:#E9EAF0;--card:#fff;--nav:rgba(255,255,255,.96);--bd:#DCDEE6;--txt:#1A1D26;--txt2:#4A4E5A;--mt:#8A8FA3;--ac:#1B3A6B;--acS:rgba(27,58,107,.08);--cta:#FF6B34;--gA:#1B3A6B;--gB:#2D5AA0;--ok:#36D6A0;--warn:#FFB347;--err:#FF6B8A}
+@media(prefers-color-scheme:dark){:root{--bg:#0D0F14;--sf:#171A23;--card:#1C1F2E;--nav:rgba(28,31,46,.96);--bd:#2A2D3A;--txt:#EAECF0;--txt2:#B0B4C0;--mt:#6E7286;--ac:#6BA3FF;--acS:rgba(107,163,255,.1);--cta:#FF7B4A;--gA:#162D52;--gB:#1E4480;--ok:#2BC48A;--warn:#E8A33A;--err:#E85A72}}
 *{box-sizing:border-box;margin:0;padding:0}
 body{margin:0;background:var(--bg);font-family:'Rubik',sans-serif;color:var(--txt);-webkit-font-smoothing:antialiased}
-input,select,button{font-family:inherit;color:var(--txt)}
-input:focus,select:focus{outline:none;border-color:var(--ac)!important}
+input,select,button,textarea{font-family:inherit;color:var(--txt)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac)!important}
+textarea{resize:vertical}
 ::-webkit-scrollbar{width:0;height:0}
 @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -33,78 +34,95 @@ input:focus,select:focus{outline:none;border-color:var(--ac)!important}
 const {useState,useEffect,useRef,useMemo,useCallback} = React;
 
 // ╔════════════════════════════════════════╗
-// ║  CONFIG — API Keys                     ║
+// ║  🔑 CONFIG                             ║
 // ╚════════════════════════════════════════╝
 const GKEY = "AIzaSyDT_qnfBzfXDSMj_1L6fj3CaLOeUZShdXs";
-
 const firebaseConfig = {
-  apiKey: "AIzaSyC8-vjiADX4RTsM8qAK0IS2jVo6O0X_SYI",
-  authDomain: "mytrip-nech.firebaseapp.com",
-  databaseURL: "https://mytrip-nech-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "mytrip-nech",
-  storageBucket: "mytrip-nech.firebasestorage.app",
-  messagingSenderId: "258059120900",
-  appId: "1:258059120900:web:bcbd759d8195dede26a051"
+  apiKey:"AIzaSyC8-vjiADX4RTsM8qAK0IS2jVo6O0X_SYI",authDomain:"mytrip-nech.firebaseapp.com",
+  databaseURL:"https://mytrip-nech-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"mytrip-nech",storageBucket:"mytrip-nech.firebasestorage.app",
+  messagingSenderId:"258059120900",appId:"1:258059120900:web:bcbd759d8195dede26a051"
 };
-
-// ── Firebase Init ──
-const fbApp = firebase.initializeApp(firebaseConfig);
-const fbAuth = firebase.auth();
-const fbDB = firebase.database();
+const fbApp=firebase.initializeApp(firebaseConfig);
+const fbAuth=firebase.auth();
+const fbDB=firebase.database();
 
 // ── Constants ──
-const TYPES=["flight","hotel","restaurant","attraction","transport"];
-const CURS=["ILS","EUR","USD","GBP"];
-const EX={ILS:1,EUR:4.05,USD:3.65,GBP:4.68};
-const TZS=["Asia/Jerusalem","Europe/Athens","Europe/London","Europe/Paris","America/New_York","UTC"];
-const CLR={flight:"#4F8CFF",hotel:"#A855F7",restaurant:"#FF6B8A",attraction:"#36D6A0",transport:"#FFB347"};
-const EMJ={flight:"✈️",hotel:"🏨",restaurant:"🍽️",attraction:"📸",transport:"🚌"};
-const MCOL=["#4F8CFF","#FF6B8A","#36D6A0","#FFB347","#A855F7","#00B894","#E84393"];
-const xid=function(){return "x"+Math.random().toString(36).substr(2,8);};
-const money=function(n,c){return({ILS:"₪",EUR:"€",USD:"$",GBP:"£"}[c]||"")+Math.round(n).toLocaleString();};
+const TYPES=["flight","hotel","restaurant","attraction","transport","custom"];
+const TRANSPORT_SUB=["bus","train","subway","car_rental","taxi","ferry","other"];
+const CURS=["ILS","EUR","USD","GBP","THB","JPY","TRY"];
+const EX={ILS:1,EUR:4.05,USD:3.65,GBP:4.68,THB:0.1,JPY:0.024,TRY:0.11};
+const TZS=["Asia/Jerusalem","Europe/Athens","Europe/London","Europe/Paris","Europe/Rome","America/New_York","America/Los_Angeles","Asia/Tokyo","Asia/Bangkok","UTC"];
+const CLR={flight:"#4F8CFF",hotel:"#A855F7",restaurant:"#FF6B8A",attraction:"#36D6A0",transport:"#FFB347",custom:"#6C5CE7"};
+const EMJ={flight:"✈️",hotel:"🏨",restaurant:"🍽️",attraction:"📸",transport:"🚌",custom:"📌",bus:"🚌",train:"🚂",subway:"🚇",car_rental:"🚗",taxi:"🚕",ferry:"⛴️",other:"🚐"};
+const MCOL=["#4F8CFF","#FF6B8A","#36D6A0","#FFB347","#A855F7","#00B894","#E84393","#6C5CE7"];
+const CL_CATS=["clothing","toiletries","electronics","documents","health","misc"];
+const CL_CAT_E={clothing:"👕",toiletries:"🧴",electronics:"🔌",documents:"📄",health:"💊",misc:"📦"};
+const CL_CAT_HE={clothing:"ביגוד",toiletries:"כלי רחצה",electronics:"אלקטרוניקה",documents:"מסמכים",health:"בריאות",misc:"שונות"};
+const CL_CAT_EN={clothing:"Clothing",toiletries:"Toiletries",electronics:"Electronics",documents:"Documents",health:"Health",misc:"Misc"};
+
+const xid=function(){return"x"+Math.random().toString(36).substr(2,8);};
+const money=function(n,c){return({ILS:"₪",EUR:"€",USD:"$",GBP:"£",THB:"฿",JPY:"¥",TRY:"₺"}[c]||"")+Math.round(n).toLocaleString();};
 const toI=function(a,c){return a*(EX[c]||1);};
 
 // ── Translations ──
 const L={
-he:{home:"בית",itin:"מסלול",exp:"הוצאות",map:"מפה",grp:"קבוצה",wish:"משאלות",chk:"צ'קליסט",day:"יום",add:"הוסף",save:"שמור",cancel:"ביטול",del:"מחק",edit:"ערוך",title:"כותרת",time:"שעה",end:"סיום",loc:"מיקום",notes:"הערות",search:"חפש בגוגל מפות...",fnum:"מספר טיסה",tz1:"שעון מוצא",tz2:"שעון יעד",upload:"העלה",desc:"תיאור",amount:"סכום",cur:"מטבע",paid:"שולם ע\"י",pers:"אישי",share:"משותף",owes:"חייב/ת",ok:"מיושב!",total:"סה\"כ",myB:"התקציב שלי",grpB:"קבוצתי",spent:"הוצאתי",view:"הצג:",mems:"חברים",invite:"קוד הזמנה",copy:"העתק",addM:"הוסף חבר",name:"שם",noI:"אין פריטים",trips:"הטיולים שלי",newT:"טיול חדש",editT:"עריכת טיול",tName:"שם הטיול",start:"התחלה",stop:"סיום",create:"צור",budget:"תקציב",noT:"אין טיולים — צור או הצטרף!",addW:"הוסף",move:"העבר ליום",noW:"ריקה!",shE:"משותפת",prE:"אישית",all:"הכל",hist:"היסטוריה",bal:"מאזנים",join:"הצטרף לטיול",joinCode:"הכנס קוד הזמנה",joinBtn:"הצטרף",shareLink:"שתף לינק",copied:"הועתק!",loading:"טוען...",yourName:"השם שלך",setName:"המשך",
-ty:{flight:"טיסה",hotel:"מלון",restaurant:"מסעדה",attraction:"אטרקציה",transport:"תחבורה"},
+he:{home:"בית",itin:"מסלול",exp:"הוצאות",map:"מפה",grp:"קבוצה",wish:"משאלות",chk:"צ'קליסט",more:"עוד",
+day:"יום",add:"הוסף",save:"שמור",cancel:"ביטול",del:"מחק",edit:"ערוך",
+title:"כותרת",time:"שעה",end:"סיום",loc:"מיקום",notes:"הערות",search:"חפש בגוגל מפות...",
+fnum:"מספר טיסה",tz1:"שעון מוצא",tz2:"שעון יעד",term:"טרמינל",gate:"שער",
+checkIn:"צ'ק-אין",checkOut:"צ'ק-אאוט",
+transType:"סוג תחבורה",fromLoc:"מנקודה",toLoc:"לנקודה",
+price:"מחיר",upload:"העלה",desc:"תיאור",amount:"סכום",cur:"מטבע",paid:"שולם ע\"י",
+pers:"אישי",share:"משותף",owes:"חייב/ת",ok:"מיושב!",total:"סה\"כ",
+myB:"התקציב שלי",grpB:"קבוצתי",spent:"הוצאתי",view:"הצג:",
+mems:"חברים",invite:"קוד הזמנה",copy:"העתק",addM:"הוסף חבר",name:"שם",
+noI:"אין פריטים",trips:"הטיולים שלי",newT:"טיול חדש",editT:"עריכת טיול",
+tName:"שם הטיול",start:"התחלה",stop:"סיום",create:"צור",budget:"תקציב",
+noT:"אין טיולים — צור או הצטרף!",addW:"הוסף",move:"העבר ליום",noW:"ריקה!",
+shE:"משותפת",prE:"אישית",all:"הכל",hist:"היסטוריה",bal:"מאזנים",
+join:"הצטרף לטיול",joinCode:"הכנס קוד",joinBtn:"הצטרף",shareLink:"שתף לינק",copied:"הועתק!",
+loading:"טוען...",yourName:"השם שלך",setName:"המשך",
+qty:"כמות",cat:"קטגוריה",addItem:"הוסף פריט",
+emergency:"חירום",emDesc:"מספרי טלפון חשובים",police:"משטרה",ambulance:"אמבולנס",embassy:"שגרירות",insurance:"ביטוח",
+converter:"המרת מטבע",rate:"שער",result:"תוצאה",customCat:"קטגוריה מותאמת",catName:"שם הקטגוריה",
+ty:{flight:"טיסה",hotel:"מלון",restaurant:"מסעדה",attraction:"אטרקציה",transport:"תחבורה",custom:"מותאם"},
+trSub:{bus:"אוטובוס",train:"רכבת",subway:"סאבווי",car_rental:"השכרת רכב",taxi:"מונית",ferry:"מעבורת",other:"אחר"},
 cl:["דרכון","ביטוח נסיעות","מטען יד","שקע/מתאם","תרופות","מטבע מקומי","מפות אופליין","הזמנות"]},
-en:{home:"Home",itin:"Itinerary",exp:"Expenses",map:"Map",grp:"Group",wish:"Wishlist",chk:"Checklist",day:"Day",add:"Add",save:"Save",cancel:"Cancel",del:"Delete",edit:"Edit",title:"Title",time:"Time",end:"End",loc:"Location",notes:"Notes",search:"Search Google Maps...",fnum:"Flight #",tz1:"Origin TZ",tz2:"Dest TZ",upload:"Upload",desc:"Description",amount:"Amount",cur:"Currency",paid:"Paid by",pers:"Personal",share:"Shared",owes:"owes",ok:"Settled!",total:"Total",myB:"My Budget",grpB:"Group",spent:"I spent",view:"View:",mems:"Members",invite:"Invite Code",copy:"Copy",addM:"Add Member",name:"Name",noI:"No items",trips:"My Trips",newT:"New Trip",editT:"Edit Trip",tName:"Trip Name",start:"Start",stop:"End",create:"Create",budget:"Budget",noT:"No trips — create or join!",addW:"Add",move:"To Day",noW:"Empty!",shE:"Shared",prE:"Personal",all:"All",hist:"History",bal:"Balances",join:"Join Trip",joinCode:"Enter invite code",joinBtn:"Join",shareLink:"Share Link",copied:"Copied!",loading:"Loading...",yourName:"Your Name",setName:"Continue",
-ty:{flight:"Flight",hotel:"Hotel",restaurant:"Restaurant",attraction:"Attraction",transport:"Transport"},
+en:{home:"Home",itin:"Itinerary",exp:"Expenses",map:"Map",grp:"Group",wish:"Wishlist",chk:"Checklist",more:"More",
+day:"Day",add:"Add",save:"Save",cancel:"Cancel",del:"Delete",edit:"Edit",
+title:"Title",time:"Time",end:"End",loc:"Location",notes:"Notes",search:"Search Google Maps...",
+fnum:"Flight #",tz1:"Origin TZ",tz2:"Dest TZ",term:"Terminal",gate:"Gate",
+checkIn:"Check-in",checkOut:"Check-out",
+transType:"Transport Type",fromLoc:"From",toLoc:"To",
+price:"Price",upload:"Upload",desc:"Description",amount:"Amount",cur:"Currency",paid:"Paid by",
+pers:"Personal",share:"Shared",owes:"owes",ok:"Settled!",total:"Total",
+myB:"My Budget",grpB:"Group",spent:"I spent",view:"View:",
+mems:"Members",invite:"Invite",copy:"Copy",addM:"Add Member",name:"Name",
+noI:"No items",trips:"My Trips",newT:"New Trip",editT:"Edit Trip",
+tName:"Trip Name",start:"Start",stop:"End",create:"Create",budget:"Budget",
+noT:"No trips yet!",addW:"Add",move:"To Day",noW:"Empty!",
+shE:"Shared",prE:"Personal",all:"All",hist:"History",bal:"Balances",
+join:"Join Trip",joinCode:"Enter code",joinBtn:"Join",shareLink:"Share Link",copied:"Copied!",
+loading:"Loading...",yourName:"Your Name",setName:"Continue",
+qty:"Qty",cat:"Category",addItem:"Add Item",
+emergency:"Emergency",emDesc:"Important phone numbers",police:"Police",ambulance:"Ambulance",embassy:"Embassy",insurance:"Insurance",
+converter:"Currency Converter",rate:"Rate",result:"Result",customCat:"Custom Category",catName:"Category Name",
+ty:{flight:"Flight",hotel:"Hotel",restaurant:"Restaurant",attraction:"Attraction",transport:"Transport",custom:"Custom"},
+trSub:{bus:"Bus",train:"Train",subway:"Subway",car_rental:"Car Rental",taxi:"Taxi",ferry:"Ferry",other:"Other"},
 cl:["Passport","Insurance","Carry-on","Adapter","Meds","Currency","Maps","Bookings"]}
 };
 
 // ── Utils ──
 function pSpent(exps,uid2){var t=0;if(!exps)return 0;var arr=Object.values(exps);for(var i=0;i<arr.length;i++){var e=arr[i];if(!e||!e.splitBetween)continue;var sb=Object.values(e.splitBetween);if(e.scope==="personal"&&e.paidBy===uid2)t+=toI(e.amount,e.currency);else if(e.scope==="shared"&&sb.indexOf(uid2)>=0)t+=toI(e.amount/sb.length,e.currency);}return t;}
-function settle(exps,mems){
-  if(!exps||!mems)return[];
-  var arr=Object.values(exps);var marr=Object.values(mems);
-  var b={};marr.forEach(function(m){b[m.id]=0;});
-  arr.filter(function(e){return e&&e.scope==="shared"&&e.splitBetween;}).forEach(function(e){
-    var sb=Object.values(e.splitBetween);var s=e.amount/sb.length;
-    if(b[e.paidBy]!==undefined)b[e.paidBy]+=e.amount;
-    sb.forEach(function(u){if(b[u]!==undefined)b[u]-=s;});
-  });
-  var d=[],c=[];
-  marr.forEach(function(m){var v=Math.round(b[m.id]*100)/100;if(v<-0.01)d.push({id:m.id,a:-v});if(v>0.01)c.push({id:m.id,a:v});});
-  d.sort(function(a,b2){return b2.a-a.a;});c.sort(function(a,b2){return b2.a-a.a;});
-  var r=[],di=0,ci=0;
-  while(di<d.length&&ci<c.length){var t2=Math.min(d[di].a,c[ci].a);if(t2>0.01)r.push({from:d[di].id,to:c[ci].id,a:Math.round(t2*100)/100});d[di].a-=t2;c[ci].a-=t2;if(d[di].a<0.01)di++;if(c[ci].a<0.01)ci++;}
-  return r;
-}
-function daysFromRange(sd,ed){
-  var days=[];var s=new Date(sd);var e=new Date(ed);
-  if(isNaN(s.getTime())||isNaN(e.getTime()))return[{dn:1,dt:sd||"2026-01-01",items:{}}];
-  var n=1;while(s<=e){days.push({dn:n,dt:s.toISOString().split("T")[0],items:{}});s.setDate(s.getDate()+1);n++;if(n>30)break;}
-  if(days.length===0)days.push({dn:1,dt:sd,items:{}});
-  return days;
-}
+function settle(exps,mems){if(!exps||!mems)return[];var arr=Object.values(exps);var marr=Object.values(mems);var b={};marr.forEach(function(m){b[m.id]=0;});arr.filter(function(e){return e&&e.scope==="shared"&&e.splitBetween;}).forEach(function(e){var sb=Object.values(e.splitBetween);var s=e.amount/sb.length;if(b[e.paidBy]!==undefined)b[e.paidBy]+=e.amount;sb.forEach(function(u){if(b[u]!==undefined)b[u]-=s;});});var d=[],c=[];marr.forEach(function(m){var v=Math.round(b[m.id]*100)/100;if(v<-0.01)d.push({id:m.id,a:-v});if(v>0.01)c.push({id:m.id,a:v});});d.sort(function(a,b2){return b2.a-a.a;});c.sort(function(a,b2){return b2.a-a.a;});var r=[],di=0,ci=0;while(di<d.length&&ci<c.length){var t2=Math.min(d[di].a,c[ci].a);if(t2>0.01)r.push({from:d[di].id,to:c[ci].id,a:Math.round(t2*100)/100});d[di].a-=t2;c[ci].a-=t2;if(d[di].a<0.01)di++;if(c[ci].a<0.01)ci++;}return r;}
+function daysFromRange(sd,ed){var days=[];var s=new Date(sd);var e=new Date(ed);if(isNaN(s.getTime())||isNaN(e.getTime()))return[{dn:1,dt:sd||"2026-01-01",items:{}}];var n=1;while(s<=e){days.push({dn:n,dt:s.toISOString().split("T")[0],items:{}});s.setDate(s.getDate()+1);n++;if(n>30)break;}if(days.length===0)days.push({dn:1,dt:sd,items:{}});return days;}
+function objArr(o){return o?Object.values(o):[];}
 
-// ── Google Maps Loader ──
+// ── Google Maps ──
 var _gl=false,_gc=[];
 function gLoad(cb){if(window.google&&window.google.maps){cb();return;}_gc.push(cb);if(_gl)return;_gl=true;window._gcb=function(){_gc.forEach(function(f){f();});_gc=[];};var s=document.createElement("script");s.src="https://maps.googleapis.com/maps/api/js?key="+GKEY+"&libraries=places&callback=_gcb&language=he";s.async=true;document.head.appendChild(s);}
 
-// ── PlacesInput ──
 function PlIn(props){
   var ref=useRef(null);var acr=useRef(null);var _r=useState(false),rdy=_r[0],setRdy=_r[1];
   useEffect(function(){gLoad(function(){setRdy(true);});},[]);
@@ -112,7 +130,6 @@ function PlIn(props){
   return <div style={{position:"relative"}}><input ref={ref} defaultValue={props.val||""} placeholder={props.ph||""} style={{width:"100%",padding:"10px 12px 10px 34px",borderRadius:10,border:"1px solid var(--bd)",background:"var(--sf)",color:"var(--txt)",fontSize:13,boxSizing:"border-box"}} /><span style={{position:"absolute",top:10,left:10,fontSize:14,pointerEvents:"none"}}>🔍</span></div>;
 }
 
-// ── GMap ──
 function GMap(props){
   var ref=useRef(null);var mi=useRef(null);var mk=useRef([]);var pl=useRef(null);var _r=useState(false),rdy=_r[0],setRdy=_r[1];
   useEffect(function(){gLoad(function(){setRdy(true);});},[]);
@@ -120,58 +137,108 @@ function GMap(props){
     if(!rdy||!ref.current)return;
     if(!mi.current){mi.current=new google.maps.Map(ref.current,{center:{lat:37.5,lng:24},zoom:6,mapTypeControl:true,streetViewControl:false,fullscreenControl:true});}
     mk.current.forEach(function(m){m.setMap(null);});mk.current=[];if(pl.current){pl.current.setMap(null);pl.current=null;}
-    var map=mi.current;var bounds=new google.maps.LatLngBounds();var path=[];
-    var pts=props.pts||[];
+    var map=mi.current;var bounds=new google.maps.LatLngBounds();var path=[];var pts=props.pts||[];
     pts.forEach(function(p,i){
-      if(!p||!p.lat||!p.lng)return;
-      var pos={lat:p.lat,lng:p.lng};bounds.extend(pos);
+      if(!p||!p.lat||!p.lng)return;var pos={lat:p.lat,lng:p.lng};bounds.extend(pos);
       var isW=p.isW;var c=isW?"#E84393":(CLR[p.type]||"#888");
       var lab=(props.ln==="he"?p.title:(p.titleEn||p.title))||p.location||"";
       if(!isW)path.push(pos);
       var m=new google.maps.Marker({position:pos,map:map,label:{text:isW?"♥":String(i+1),color:"#fff",fontWeight:"700",fontSize:isW?"12px":"11px"},icon:{path:google.maps.SymbolPath.CIRCLE,scale:isW?11:14,fillColor:c,fillOpacity:1,strokeColor:"#fff",strokeWeight:isW?2:3},title:lab});
-      var iw=new google.maps.InfoWindow({content:'<div style="font-family:Rubik;min-width:120px;direction:rtl"><b>'+(isW?"❤️ ":"")+(EMJ[p.type]||"")+" "+lab+"</b>"+(p.location?'<br><span style="color:#666;font-size:11px">📍 '+p.location+"</span>":"")+"</div>"});
+      var priceStr=p.price?"\n💰 "+money(p.price,p.priceCur||"ILS"):"";
+      var iw=new google.maps.InfoWindow({content:'<div style="font-family:Rubik;min-width:120px;direction:rtl"><b>'+(isW?"❤️ ":"")+(EMJ[p.type]||"📌")+" "+lab+"</b>"+(p.location?'<br><span style="color:#666;font-size:11px">📍 '+p.location+"</span>":"")+(p.time?'<br><span style="color:#888;font-size:10px">🕐 '+p.time+"</span>":"")+(priceStr?'<br><span style="color:#36D6A0;font-size:11px;font-weight:700">'+priceStr+"</span>":"")+"</div>"});
       m.addListener("click",function(){iw.open(map,m);});mk.current.push(m);
     });
     if(path.length>1){pl.current=new google.maps.Polyline({path:path,geodesic:true,strokeColor:"#1B3A6B",strokeOpacity:0,strokeWeight:3,icons:[{icon:{path:"M 0,-1 0,1",strokeOpacity:1,strokeColor:"#1B3A6B",scale:3},offset:"0",repeat:"15px"}]});pl.current.setMap(map);}
     if(pts.length>0){map.fitBounds(bounds,50);if(pts.length===1)setTimeout(function(){map.setZoom(13);},300);}
   },[rdy,props.pts,props.ln]);
-  return <div ref={ref} style={{width:"100%",height:360,borderRadius:14,overflow:"hidden",border:"1px solid var(--bd)"}} />;
+  return <div ref={ref} style={{width:"100%",height:380,borderRadius:14,overflow:"hidden",border:"1px solid var(--bd)"}} />;
 }
 
 // ── Shared UI ──
-function Mod(props){if(!props.open)return null;return <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={props.onClose}><div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(3px)"}}/><div onClick={function(e){e.stopPropagation();}} style={{position:"relative",width:"100%",maxWidth:480,maxHeight:"88vh",background:"var(--card)",borderRadius:"18px 18px 0 0",padding:"16px 18px",overflowY:"auto",animation:"slideUp .25s ease"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:0}}>{props.title}</h2><button onClick={props.onClose} style={{background:"var(--sf)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:14,color:"var(--mt)",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>{props.ch}</div></div>;}
+function Mod(props){if(!props.open)return null;return <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={props.onClose}><div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(3px)"}}/><div onClick={function(e){e.stopPropagation();}} style={{position:"relative",width:"100%",maxWidth:480,maxHeight:"90vh",background:"var(--card)",borderRadius:"18px 18px 0 0",padding:"16px 18px",overflowY:"auto",animation:"slideUp .25s ease"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:0}}>{props.title}</h2><button onClick={props.onClose} style={{background:"var(--sf)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:14,color:"var(--mt)",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>{props.ch}</div></div>;}
 function Fld(props){return <div style={{marginBottom:11}}><label style={{display:"block",fontSize:11,fontWeight:600,color:"var(--mt)",marginBottom:3}}>{props.l}</label>{props.ch}</div>;}
 var IS={width:"100%",padding:"9px 12px",borderRadius:10,border:"1px solid var(--bd)",background:"var(--sf)",color:"var(--txt)",fontSize:13,boxSizing:"border-box"};
 function Inp(p){return <input {...p} style={Object.assign({},IS,p.style||{})} />;}
 function Sel(p){return <select value={p.v} onChange={p.fn} style={IS}>{p.ops.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>;})}</select>;}
-function Bt(p){var c={primary:{background:"var(--ac)",color:"#fff"},secondary:{background:"var(--sf)",color:"var(--txt)"},danger:{background:"#FF4757",color:"#fff"}};return <button onClick={p.fn} disabled={p.dis} style={Object.assign({padding:"9px 16px",borderRadius:10,border:"none",fontWeight:700,fontSize:13,cursor:p.dis?"default":"pointer",display:"inline-flex",alignItems:"center",gap:4,opacity:p.dis?0.5:1},c[p.vr||"primary"]||c.primary,p.st||{})}>{p.ch}</button>;}
+function Bt(p){var c={primary:{background:"var(--ac)",color:"#fff"},secondary:{background:"var(--sf)",color:"var(--txt)"},danger:{background:"var(--err)",color:"#fff"},success:{background:"var(--ok)",color:"#fff"}};return <button onClick={p.fn} disabled={p.dis} style={Object.assign({padding:"9px 16px",borderRadius:10,border:"none",fontWeight:700,fontSize:13,cursor:p.dis?"default":"pointer",display:"inline-flex",alignItems:"center",gap:4,opacity:p.dis?0.5:1},c[p.vr||"primary"]||c.primary,p.st||{})}>{p.ch}</button>;}
 function Spinner(){return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"60vh"}}><div style={{width:32,height:32,border:"3px solid var(--bd)",borderTopColor:"var(--ac)",borderRadius:"50%",animation:"spin .6s linear infinite"}}/></div>;}
+function Chip(p){return <button onClick={p.fn} style={{padding:"4px 10px",borderRadius:16,border:p.on?"2px solid "+p.c:"1px solid var(--bd)",background:p.on?p.c+"18":"var(--sf)",color:p.on?p.c:"var(--mt)",cursor:"pointer",fontWeight:600,fontSize:11,display:"inline-flex",alignItems:"center",gap:3}}>{p.ch}</button>;}
 
-// ── Item Form ──
+// ── Enhanced Item Form ──
 function IForm(props){
-  var t=L[props.ln];
-  var _d=useState(props.item||{type:"attraction",title:"",titleEn:"",time:"",endTime:"",location:"",lat:0,lng:0,notes:"",flightNum:"",tzOrigin:"Asia/Jerusalem",tzDest:"Europe/Athens"}),d=_d[0],setD=_d[1];
-  var mk=props.ln==="he"?"title":"titleEn";
+  var t=L[props.ln]; var ln=props.ln;
+  var blank={type:"attraction",title:"",titleEn:"",time:"",endTime:"",location:"",lat:0,lng:0,notes:"",
+    flightNum:"",tzOrigin:"Asia/Jerusalem",tzDest:"Europe/Athens",terminal:"",gate:"",
+    checkInTime:"",checkOutTime:"",
+    transportSub:"bus",fromLocation:"",fromLat:0,fromLng:0,toLocation:"",toLat:0,toLng:0,
+    price:0,priceCur:"ILS",customCatName:""};
+  var _d=useState(props.item?Object.assign({},blank,props.item):blank),d=_d[0],setD=_d[1];
+  var mk=ln==="he"?"title":"titleEn";
   var s=function(k,v){setD(function(prev){var n=Object.assign({},prev);n[k]=v;return n;});};
+
   return <div>
-    <Fld l={t.cat||"Category"} ch={<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{TYPES.map(function(tp){return <button key={tp} onClick={function(){s("type",tp);}} style={{padding:"5px 9px",borderRadius:7,border:d.type===tp?"2px solid "+CLR[tp]:"1px solid var(--bd)",background:d.type===tp?CLR[tp]+"18":"var(--sf)",color:d.type===tp?CLR[tp]:"var(--mt)",cursor:"pointer",fontWeight:600,fontSize:11}}>{EMJ[tp]} {t.ty[tp]}</button>;})}</div>} />
+    {/* Type selector */}
+    <Fld l={t.cat||""} ch={<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+      {TYPES.map(function(tp){return <Chip key={tp} on={d.type===tp} c={CLR[tp]} fn={function(){s("type",tp);}} ch={<span>{EMJ[tp]} {t.ty[tp]}</span>} />;})}
+    </div>} />
+
+    {d.type==="custom" && <Fld l={t.customCat} ch={<Inp value={d.customCatName||""} onChange={function(e){s("customCatName",e.target.value);}} placeholder={t.catName} />} />}
+
     <Fld l={t.title} ch={<Inp value={d[mk]} onChange={function(e){s(mk,e.target.value);}} />} />
+
+    {/* Time */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <Fld l={t.time} ch={<Inp type="time" value={d.time} onChange={function(e){s("time",e.target.value);}} />} />
       <Fld l={t.end} ch={<Inp type="time" value={d.endTime||""} onChange={function(e){s("endTime",e.target.value);}} />} />
     </div>
-    {d.type==="flight" && <div>
-      <Fld l={t.fnum} ch={<Inp value={d.flightNum||""} onChange={function(e){s("flightNum",e.target.value);}} placeholder="LY 315" />} />
+
+    {/* ── Flight specific ── */}
+    {d.type==="flight" && <div style={{background:"var(--acS)",borderRadius:10,padding:10,marginBottom:11}}>
+      <div style={{fontSize:11,fontWeight:700,color:"var(--ac)",marginBottom:6}}>✈️ {t.ty.flight}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <Fld l={t.fnum} ch={<Inp value={d.flightNum||""} onChange={function(e){s("flightNum",e.target.value);}} placeholder="LY 315" />} />
+        <Fld l={t.term} ch={<Inp value={d.terminal||""} onChange={function(e){s("terminal",e.target.value);}} placeholder="T3" />} />
+      </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld l={t.tz1} ch={<Sel v={d.tzOrigin||"UTC"} fn={function(e){s("tzOrigin",e.target.value);}} ops={TZS.map(function(z){return{v:z,l:z.split("/").pop()};})} />} />
         <Fld l={t.tz2} ch={<Sel v={d.tzDest||"UTC"} fn={function(e){s("tzDest",e.target.value);}} ops={TZS.map(function(z){return{v:z,l:z.split("/").pop()};})} />} />
       </div>
+      <Fld l={t.gate} ch={<Inp value={d.gate||""} onChange={function(e){s("gate",e.target.value);}} placeholder="B12" />} />
     </div>}
-    <Fld l={"📍 "+t.loc+" — Google Maps"} ch={<div>
+
+    {/* ── Hotel specific ── */}
+    {d.type==="hotel" && <div style={{background:"#A855F712",borderRadius:10,padding:10,marginBottom:11}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#A855F7",marginBottom:6}}>🏨 {t.ty.hotel}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <Fld l={t.checkIn} ch={<Inp type="time" value={d.checkInTime||""} onChange={function(e){s("checkInTime",e.target.value);}} />} />
+        <Fld l={t.checkOut} ch={<Inp type="time" value={d.checkOutTime||""} onChange={function(e){s("checkOutTime",e.target.value);}} />} />
+      </div>
+    </div>}
+
+    {/* ── Transport specific ── */}
+    {d.type==="transport" && <div style={{background:"#FFB34712",borderRadius:10,padding:10,marginBottom:11}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#FFB347",marginBottom:6}}>🚌 {t.transType}</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+        {TRANSPORT_SUB.map(function(ts){return <Chip key={ts} on={d.transportSub===ts} c="#FFB347" fn={function(){s("transportSub",ts);}} ch={<span>{EMJ[ts]||"🚐"} {t.trSub[ts]||ts}</span>} />;})}
+      </div>
+      <Fld l={t.fromLoc+" 📍"} ch={<PlIn val={d.fromLocation||""} ph={t.search} onPick={function(loc){setD(function(p){return Object.assign({},p,{fromLocation:loc.location,fromLat:loc.lat,fromLng:loc.lng});});}} />} />
+      <Fld l={t.toLoc+" 📍"} ch={<PlIn val={d.toLocation||""} ph={t.search} onPick={function(loc){setD(function(p){return Object.assign({},p,{toLocation:loc.location,toLat:loc.lat,toLng:loc.lng});});}} />} />
+    </div>}
+
+    {/* Location (for all except transport which has from/to) */}
+    {d.type!=="transport" && <Fld l={"📍 "+t.loc} ch={<div>
       <PlIn val={d.location} ph={t.search} onPick={function(loc){setD(function(p){return Object.assign({},p,loc);});}} />
       {d.lat!==0 && <p style={{fontSize:9,color:"var(--ac)",marginTop:3}}>✓ {d.location}</p>}
-    </div>} />
-    <Fld l={t.notes} ch={<Inp value={d.notes} onChange={function(e){s("notes",e.target.value);}} />} />
+    </div>} />}
+
+    {/* Price */}
+    <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8}}>
+      <Fld l={"💰 "+t.price} ch={<Inp type="number" value={d.price||""} onChange={function(e){s("price",parseFloat(e.target.value)||0);}} placeholder="0" />} />
+      <Fld l={t.cur} ch={<Sel v={d.priceCur||"ILS"} fn={function(e){s("priceCur",e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
+    </div>
+
+    <Fld l={t.notes} ch={<textarea value={d.notes} onChange={function(e){s("notes",e.target.value);}} style={Object.assign({},IS,{minHeight:50})} />} />
+
     <div style={{display:"flex",gap:6,marginTop:8}}>
       <Bt ch={"✓ "+t.save} fn={function(){props.onSave(d);}} st={{flex:1,justifyContent:"center"}} />
       {props.isEd&&props.onDel && <Bt vr="danger" ch="🗑" fn={props.onDel} />}
@@ -180,8 +247,20 @@ function IForm(props){
   </div>;
 }
 
+// ── Mock ──
+function mock(){return{id:"t1",name:"טיול יוון 2026",nameEn:"Greece 2026",sd:"2026-06-15",ed:"2026-06-22",inv:"GR2026",budget:20000,
+mems:{u1:{id:"u1",uid:"",name:"יונתן",nameEn:"Yonatan",av:"Y",c:"#4F8CFF"},u2:{id:"u2",uid:"",name:"נועה",nameEn:"Noa",av:"N",c:"#FF6B8A"},u3:{id:"u3",uid:"",name:"אורי",nameEn:"Ori",av:"O",c:"#36D6A0"},u4:{id:"u4",uid:"",name:"מאיה",nameEn:"Maya",av:"M",c:"#FFB347"}},
+cl:{c0:{id:"c0",text:"דרכון",textEn:"Passport",cat:"documents",qty:1,ck:{}},c1:{id:"c1",text:"ביטוח נסיעות",textEn:"Insurance",cat:"documents",qty:1,ck:{}},c2:{id:"c2",text:"מטען יד",textEn:"Carry-on",cat:"misc",qty:1,ck:{}},c3:{id:"c3",text:"שקע/מתאם",textEn:"Adapter",cat:"electronics",qty:1,ck:{}},c4:{id:"c4",text:"תרופות",textEn:"Meds",cat:"health",qty:1,ck:{}},c5:{id:"c5",text:"חולצות",textEn:"T-shirts",cat:"clothing",qty:7,ck:{}},c6:{id:"c6",text:"מכנסיים",textEn:"Pants",cat:"clothing",qty:3,ck:{}},c7:{id:"c7",text:"קרם הגנה",textEn:"Sunscreen",cat:"toiletries",qty:1,ck:{}}},
+wl:{w1:{id:"w1",title:"מטאורה",titleEn:"Meteora",location:"Meteora",lat:39.7217,lng:21.6308,type:"attraction",notes:"מנזרים"}},
+emergency:{police:"100",ambulance:"166",embassy:"+30-210-7257-400",insurance:"*4000"},
+itin:{d0:{dn:1,dt:"2026-06-15",items:{i1:{id:"i1",type:"flight",title:"טיסה לאתונה",titleEn:"Flight",time:"06:30",endTime:"10:15",location:"Athens Airport",lat:37.9364,lng:23.9445,notes:"Aegean",flightNum:"A3 921",tzOrigin:"Asia/Jerusalem",tzDest:"Europe/Athens",terminal:"T3",gate:"B7",price:1200,priceCur:"ILS"},i2:{id:"i2",type:"hotel",title:"מלון פלאקה",titleEn:"Plaka Hotel",time:"14:00",endTime:"",location:"Plaka, Athens",lat:37.9747,lng:23.7279,notes:"AthenStyle",checkInTime:"14:00",checkOutTime:"11:00",price:80,priceCur:"EUR"},i3:{id:"i3",type:"attraction",title:"אקרופוליס",titleEn:"Acropolis",time:"16:00",endTime:"18:30",location:"Acropolis",lat:37.9715,lng:23.7257,notes:"כרטיסים מראש!",price:20,priceCur:"EUR"}}},
+d1:{dn:2,dt:"2026-06-16",items:{i4:{id:"i4",type:"transport",title:"מעבורת לסנטוריני",titleEn:"Ferry",time:"15:00",endTime:"20:00",transportSub:"ferry",fromLocation:"Piraeus Port",fromLat:37.9485,fromLng:23.6431,toLocation:"Santorini Port",toLat:36.4035,toLng:25.4447,location:"Piraeus → Santorini",lat:37.9485,lng:23.6431,notes:"Blue Star",price:60,priceCur:"EUR"}}},
+d2:{dn:3,dt:"2026-06-17",items:{i5:{id:"i5",type:"hotel",title:"וילה באויה",titleEn:"Oia Villa",time:"",endTime:"",location:"Oia, Santorini",lat:36.4618,lng:25.3753,notes:"נוף לקלדרה",checkInTime:"15:00",checkOutTime:"11:00",price:150,priceCur:"EUR"}}}},
+exps:{e1:{id:"e1",desc:"טיסות",descEn:"Flights",amount:4800,currency:"ILS",paidBy:"u1",splitBetween:["u1","u2","u3","u4"],date:"2026-06-15",category:"flight",scope:"shared"},e2:{id:"e2",desc:"מלון אתונה",descEn:"Hotel",amount:320,currency:"EUR",paidBy:"u2",splitBetween:["u1","u2","u3","u4"],date:"2026-06-15",category:"hotel",scope:"shared"}}
+};}
+
 // ════════════════════════════════════════
-// ROOT APP with Firebase
+// APP (same architecture: App → TripList / TripView)
 // ════════════════════════════════════════
 function App(){
   var _ln=useState("he"),ln=_ln[0],setLn=_ln[1];
@@ -192,6 +271,108 @@ function App(){
   var _aId=useState(null),aId=_aId[0],setAId=_aId[1];
   var _trip=useState(null),trip=_trip[0],setTrip=_trip[1];
   var _loading=useState(true),loading=_loading[0],setLoading=_loading[1];
+  var t=L[ln];
+
+  // Auth
+  useEffect(function(){
+    fbAuth.signInAnonymously().catch(function(e){console.error(e);});
+    fbAuth.onAuthStateChanged(function(user){
+      if(user){setMyUid(user.uid);fbDB.ref("users/"+user.uid+"/name").once("value").then(function(snap){if(snap.val()){setMyName(snap.val());setNamed(true);}setLoading(false);});}
+    });
+  },[]);
+
+  // My trips
+  useEffect(function(){if(!myUid)return;var ref=fbDB.ref("userTrips/"+myUid);ref.on("value",function(snap){setTrips(snap.val()||{});});return function(){ref.off();};},[myUid]);
+
+  // Active trip listener
+  useEffect(function(){if(!aId){setTrip(null);return;}var ref=fbDB.ref("trips/"+aId);ref.on("value",function(snap){var d=snap.val();if(d)setTrip(d);else{setTrip(null);setAId(null);}});return function(){ref.off();};},[aId]);
+
+  function saveName(n){if(!n||!myUid)return;fbDB.ref("users/"+myUid+"/name").set(n);setMyName(n);setNamed(true);}
+
+  function createTrip(f){
+    var tid=xid();var inv=Math.random().toString(36).substr(2,6).toUpperCase();
+    var days=daysFromRange(f.sd,f.ed);var itin={};days.forEach(function(d,i){itin["d"+i]=d;});
+    var cl={};L.he.cl.forEach(function(c,i){cl["c"+i]={id:"c"+i,text:c,textEn:L.en.cl[i],cat:"misc",qty:1,ck:{}};});
+    var memId=xid();var td={id:tid,name:f.name||"טיול",nameEn:f.nameEn||"Trip",sd:f.sd||"2026-01-01",ed:f.ed||"",inv:inv,budget:0,mems:{},itin:itin,exps:{},wl:{},cl:cl,emergency:{police:"",ambulance:"",embassy:"",insurance:""}};
+    td.mems[memId]={id:memId,uid:myUid,name:myName,nameEn:myName,av:myName.charAt(0).toUpperCase(),c:MCOL[0]};
+    fbDB.ref("trips/"+tid).set(td);
+    fbDB.ref("userTrips/"+myUid+"/"+tid).set({id:tid,name:td.name,nameEn:td.nameEn,inv:inv});
+    fbDB.ref("invites/"+inv).set(tid);
+    setAId(tid);
+  }
+
+  function joinTrip(code){
+    if(!code)return;
+    fbDB.ref("invites/"+code.toUpperCase()).once("value").then(function(snap){
+      var tid=snap.val();if(!tid){alert("Code not found");return;}
+      fbDB.ref("trips/"+tid).once("value").then(function(tSnap){
+        var td=tSnap.val();if(!td)return;
+        var memId=xid();
+        fbDB.ref("trips/"+tid+"/mems/"+memId).set({id:memId,uid:myUid,name:myName,nameEn:myName,av:myName.charAt(0).toUpperCase(),c:MCOL[Object.keys(td.mems||{}).length%MCOL.length]});
+        fbDB.ref("userTrips/"+myUid+"/"+tid).set({id:tid,name:td.name,nameEn:td.nameEn,inv:td.inv});
+        setAId(tid);
+      });
+    });
+  }
+
+  if(loading)return <Spinner />;
+
+  // Name screen
+  if(!named)return <div style={{maxWidth:400,margin:"0 auto",padding:"60px 20px",textAlign:"center"}}>
+    <h1 style={{fontSize:28,fontWeight:800,color:"var(--txt)",marginBottom:8}}>✈️ TripMate</h1>
+    <p style={{color:"var(--mt)",marginBottom:24}}>{t.yourName}</p>
+    <Inp value={myName} onChange={function(e){setMyName(e.target.value);}} style={{textAlign:"center",fontSize:16,marginBottom:16}} />
+    <Bt ch={t.setName} fn={function(){if(myName.trim())saveName(myName.trim());}} st={{width:"100%",justifyContent:"center",padding:"12px 20px",fontSize:15}} />
+    <button onClick={function(){setLn(ln==="he"?"en":"he");}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",marginTop:16,fontSize:12}}>{ln==="he"?"English":"עברית"}</button>
+  </div>;
+
+  // Trip list
+  if(!aId||!trip){
+    return <TripList trips={objArr(trips)} ln={ln} setLn={setLn} t={t} myName={myName} onCreate={createTrip} onJoin={joinTrip} onPick={function(id2){setAId(id2);}} />;
+  }
+
+  // Trip view
+  return <TripView trip={trip} aId={aId} myUid={myUid} ln={ln} setLn={setLn} t={t} onBack={function(){setAId(null);setTrip(null);}} />;
+}
+
+// ── Trip List ──
+function TripList(props){
+  var t=props.t;var ln=props.ln;
+  var _m=useState(null),mod=_m[0],setMod=_m[1];
+  var _f=useState({name:"",nameEn:"",sd:"",ed:""}),f=_f[0],setF=_f[1];
+  var _jc=useState(""),jc=_jc[0],setJc=_jc[1];
+  return <div style={{maxWidth:480,margin:"0 auto",padding:"28px 16px",minHeight:"100vh"}}>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
+      <h1 style={{fontSize:22,fontWeight:800,color:"var(--txt)"}}>✈️ TripMate</h1>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <span style={{fontSize:11,color:"var(--mt)"}}>{props.myName}</span>
+        <button onClick={function(){props.setLn(ln==="he"?"en":"he");}} style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:"var(--txt)"}}>{ln==="he"?"EN":"עב"}</button>
+      </div>
+    </div>
+    {props.trips.length===0 && <p style={{textAlign:"center",padding:40,color:"var(--mt)"}}>✈️ {t.noT}</p>}
+    {props.trips.map(function(tr){return <button key={tr.id} onClick={function(){props.onPick(tr.id);}} style={{width:"100%",background:"var(--card)",border:"1px solid var(--bd)",borderRadius:14,padding:14,marginBottom:8,cursor:"pointer",textAlign:"inherit"}}><h3 style={{fontSize:15,fontWeight:700,color:"var(--txt)",margin:0}}>{ln==="he"?tr.name:tr.nameEn||tr.name}</h3><p style={{fontSize:11,color:"var(--mt)",margin:"2px 0 0"}}>{t.invite}: {tr.inv}</p></button>;})}
+    <div style={{display:"flex",gap:8,marginTop:12}}>
+      <button onClick={function(){setF({name:"",nameEn:"",sd:"",ed:""});setMod("new");}} style={{flex:1,padding:14,borderRadius:12,border:"2px dashed var(--bd)",background:"transparent",color:"var(--ac)",cursor:"pointer",fontWeight:700,fontSize:14}}>+ {t.newT}</button>
+      <button onClick={function(){setJc("");setMod("join");}} style={{flex:1,padding:14,borderRadius:12,background:"var(--acS)",border:"1px solid var(--bd)",color:"var(--ac)",cursor:"pointer",fontWeight:700,fontSize:14}}>🔗 {t.join}</button>
+    </div>
+    <Mod open={mod==="new"} onClose={function(){setMod(null);}} title={t.newT} ch={<div>
+      <Fld l={t.tName} ch={<Inp value={ln==="he"?f.name:f.nameEn} onChange={function(e){if(ln==="he")setF(Object.assign({},f,{name:e.target.value}));else setF(Object.assign({},f,{nameEn:e.target.value}));}} />} />
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <Fld l={t.start} ch={<Inp type="date" value={f.sd} onChange={function(e){setF(Object.assign({},f,{sd:e.target.value}));}} />} />
+        <Fld l={t.stop} ch={<Inp type="date" value={f.ed} onChange={function(e){setF(Object.assign({},f,{ed:e.target.value}));}} />} />
+      </div>
+      <Bt ch={t.create} fn={function(){props.onCreate(f);setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
+    </div>} />
+    <Mod open={mod==="join"} onClose={function(){setMod(null);}} title={t.join} ch={<div>
+      <Fld l={t.joinCode} ch={<Inp value={jc} onChange={function(e){setJc(e.target.value.toUpperCase());}} style={{textAlign:"center",fontSize:18,letterSpacing:3,fontWeight:700}} />} />
+      <Bt ch={t.joinBtn} fn={function(){props.onJoin(jc);setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
+    </div>} />
+  </div>;
+}
+
+// ── Trip View (main screen) ──
+function TripView(props){
+  var trip=props.trip;var aId=props.aId;var ln=props.ln;var t=L[ln];var isR=ln==="he";
   var _tab=useState("home"),tab=_tab[0],setTab=_tab[1];
   var _mod=useState(null),mod=_mod[0],setMod=_mod[1];
   var _eIt=useState(null),eIt=_eIt[0],setEIt=_eIt[1];
@@ -204,156 +385,21 @@ function App(){
   var _nw=useState({title:"",titleEn:"",location:"",lat:0,lng:0,notes:""}),nw=_nw[0],setNw=_nw[1];
   var _nm=useState(""),nm=_nm[0],setNm=_nm[1];
   var _tf=useState({}),tf=_tf[0],setTf=_tf[1];
-  var _jc=useState(""),jc=_jc[0],setJc=_jc[1];
   var _cp=useState(false),cp=_cp[0],setCp=_cp[1];
-  var t=L[ln];
+  var _nci=useState({text:"",textEn:"",cat:"misc",qty:1}),nci=_nci[0],setNci=_nci[1];
+  var _clCat=useState("all"),clCat=_clCat[0],setClCat=_clCat[1];
+  var _cvAmt=useState(""),cvAmt=_cvAmt[0],setCvAmt=_cvAmt[1];
+  var _cvFrom=useState("EUR"),cvFrom=_cvFrom[0],setCvFrom=_cvFrom[1];
+  var _cvTo=useState("ILS"),cvTo=_cvTo[0],setCvTo=_cvTo[1];
 
-  // ── Auth ──
-  useEffect(function(){
-    fbAuth.signInAnonymously().catch(function(e){console.error("Auth error:",e);});
-    fbAuth.onAuthStateChanged(function(user){
-      if(user){
-        setMyUid(user.uid);
-        // Check if user has a name
-        fbDB.ref("users/"+user.uid+"/name").once("value").then(function(snap){
-          if(snap.val()){setMyName(snap.val());setNamed(true);}
-          setLoading(false);
-        });
-      }
-    });
-  },[]);
+  function updF(path,val){fbDB.ref("trips/"+aId+"/"+path).set(val);}
 
-  // ── Load my trips ──
-  useEffect(function(){
-    if(!myUid)return;
-    var ref=fbDB.ref("userTrips/"+myUid);
-    ref.on("value",function(snap){
-      setTrips(snap.val()||{});
-    });
-    return function(){ref.off();};
-  },[myUid]);
-
-  // ── Listen to active trip ──
-  useEffect(function(){
-    if(!aId){setTrip(null);return;}
-    var ref=fbDB.ref("trips/"+aId);
-    ref.on("value",function(snap){
-      var d=snap.val();
-      if(d){setTrip(d);if(d.mems&&!vA){var keys=Object.keys(d.mems);if(keys.length>0)setVA(keys[0]);}}
-      else{setTrip(null);setAId(null);}
-    });
-    return function(){ref.off();};
-  },[aId]);
-
-  // ── Save name ──
-  function saveName(name){
-    if(!name||!myUid)return;
-    fbDB.ref("users/"+myUid+"/name").set(name);
-    setMyName(name);setNamed(true);
-  }
-
-  // ── Create trip ──
-  function createTrip(f){
-    var tripId=xid();
-    var inv=Math.random().toString(36).substr(2,6).toUpperCase();
-    var memId=xid();
-    var days=daysFromRange(f.sd,f.ed);
-    var itin={};
-    days.forEach(function(d,i){itin["d"+i]=d;});
-    var cl={};
-    L.he.cl.forEach(function(c,i){cl["c"+i]={id:"c"+i,he:c,en:L.en.cl[i],ck:{}};});
-    var tripData={
-      id:tripId,name:f.name||"טיול",nameEn:f.nameEn||"Trip",sd:f.sd||"2026-01-01",ed:f.ed||"",
-      inv:inv,budget:0,
-      mems:{},itin:itin,exps:{},wl:{},cl:cl
-    };
-    tripData.mems[memId]={id:memId,uid:myUid,name:myName,nameEn:myName,av:myName.charAt(0).toUpperCase(),c:MCOL[0]};
-    fbDB.ref("trips/"+tripId).set(tripData);
-    fbDB.ref("userTrips/"+myUid+"/"+tripId).set({id:tripId,name:tripData.name,nameEn:tripData.nameEn,inv:inv});
-    fbDB.ref("invites/"+inv).set(tripId);
-    setAId(tripId);setTab("home");setSd(0);
-  }
-
-  // ── Join trip ──
-  function joinTrip(code){
-    if(!code)return;
-    fbDB.ref("invites/"+code.toUpperCase()).once("value").then(function(snap){
-      var tripId=snap.val();
-      if(!tripId){alert(ln==="he"?"קוד לא נמצא":"Code not found");return;}
-      fbDB.ref("trips/"+tripId).once("value").then(function(tSnap){
-        var td=tSnap.val();
-        if(!td){alert("Trip not found");return;}
-        // Add member
-        var memId=xid();
-        fbDB.ref("trips/"+tripId+"/mems/"+memId).set({id:memId,uid:myUid,name:myName,nameEn:myName,av:myName.charAt(0).toUpperCase(),c:MCOL[Object.keys(td.mems||{}).length%MCOL.length]});
-        fbDB.ref("userTrips/"+myUid+"/"+tripId).set({id:tripId,name:td.name,nameEn:td.nameEn,inv:td.inv});
-        setAId(tripId);setTab("home");setMod(null);
-      });
-    });
-  }
-
-  // ── Update trip field ──
-  function updField(path,val){
-    if(!aId)return;
-    fbDB.ref("trips/"+aId+"/"+path).set(val);
-  }
-
-  // ── Helper: get arrays from Firebase objects ──
-  function objArr(o){return o?Object.values(o):[];}
-
-  if(loading)return <Spinner />;
-
-  // ── Name screen ──
-  if(!named)return <div style={{maxWidth:400,margin:"0 auto",padding:"60px 20px",textAlign:"center"}}>
-    <h1 style={{fontSize:28,fontWeight:800,color:"var(--txt)",marginBottom:8}}>✈️ TripMate</h1>
-    <p style={{color:"var(--mt)",marginBottom:24}}>{t.yourName}</p>
-    <Inp value={myName} onChange={function(e){setMyName(e.target.value);}} style={{textAlign:"center",fontSize:16,marginBottom:16}} placeholder={ln==="he"?"איך קוראים לך?":"What's your name?"} />
-    <Bt ch={t.setName} fn={function(){if(myName.trim())saveName(myName.trim());}} st={{width:"100%",justifyContent:"center",padding:"12px 20px",fontSize:15}} />
-    <button onClick={function(){setLn(ln==="he"?"en":"he");}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",marginTop:16,fontSize:12}}>{ln==="he"?"English":"עברית"}</button>
-  </div>;
-
-  // ── Trip list ──
-  if(!aId||!trip){
-    var tripArr=objArr(trips);
-    return <div style={{maxWidth:480,margin:"0 auto",padding:"28px 16px",minHeight:"100vh"}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
-        <h1 style={{fontSize:22,fontWeight:800,color:"var(--txt)"}}>✈️ TripMate</h1>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <span style={{fontSize:11,color:"var(--mt)"}}>{myName}</span>
-          <button onClick={function(){setLn(ln==="he"?"en":"he");}} style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:"var(--txt)"}}>{ln==="he"?"EN":"עב"}</button>
-        </div>
-      </div>
-      <p style={{color:"var(--mt)",marginBottom:14,fontSize:13}}>{t.trips}</p>
-      {tripArr.length===0 && <p style={{textAlign:"center",padding:40,color:"var(--mt)"}}>{t.noT}</p>}
-      {tripArr.map(function(tr){return <button key={tr.id} onClick={function(){setAId(tr.id);setTab("home");setSd(0);}} style={{width:"100%",background:"var(--card)",border:"1px solid var(--bd)",borderRadius:14,padding:14,marginBottom:8,cursor:"pointer",textAlign:"inherit"}}>
-        <h3 style={{fontSize:15,fontWeight:700,color:"var(--txt)",margin:0}}>{ln==="he"?tr.name:tr.nameEn||tr.name}</h3>
-        <p style={{fontSize:11,color:"var(--mt)",margin:"2px 0 0"}}>{t.invite}: {tr.inv}</p>
-      </button>;})}
-      <div style={{display:"flex",gap:8,marginTop:12}}>
-        <button onClick={function(){setTf({name:"",nameEn:"",sd:"",ed:""});setMod("newT");}} style={{flex:1,padding:14,borderRadius:12,border:"2px dashed var(--bd)",background:"transparent",color:"var(--ac)",cursor:"pointer",fontWeight:700,fontSize:14}}>+ {t.newT}</button>
-        <button onClick={function(){setJc("");setMod("join");}} style={{flex:1,padding:14,borderRadius:12,background:"var(--acS)",border:"1px solid var(--bd)",color:"var(--ac)",cursor:"pointer",fontWeight:700,fontSize:14}}>🔗 {t.join}</button>
-      </div>
-      <Mod open={mod==="newT"} onClose={function(){setMod(null);}} title={t.newT} ch={<div>
-        <Fld l={t.tName} ch={<Inp value={ln==="he"?tf.name:tf.nameEn} onChange={function(e){if(ln==="he")setTf(Object.assign({},tf,{name:e.target.value}));else setTf(Object.assign({},tf,{nameEn:e.target.value}));}} />} />
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <Fld l={t.start} ch={<Inp type="date" value={tf.sd} onChange={function(e){setTf(Object.assign({},tf,{sd:e.target.value}));}} />} />
-          <Fld l={t.stop} ch={<Inp type="date" value={tf.ed} onChange={function(e){setTf(Object.assign({},tf,{ed:e.target.value}));}} />} />
-        </div>
-        <Bt ch={t.create} fn={function(){createTrip(tf);setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
-      </div>} />
-      <Mod open={mod==="join"} onClose={function(){setMod(null);}} title={t.join} ch={<div>
-        <Fld l={t.joinCode} ch={<Inp value={jc} onChange={function(e){setJc(e.target.value.toUpperCase());}} style={{textAlign:"center",fontSize:18,letterSpacing:3,fontWeight:700}} placeholder="ABC123" />} />
-        <Bt ch={t.joinBtn} fn={function(){joinTrip(jc);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
-      </div>} />
-    </div>;
-  }
-
-  // ── Active trip ──
   var mems=objArr(trip.mems||{});
   var exps=objArr(trip.exps||{});
   var wl=objArr(trip.wl||{});
   var itin=objArr(trip.itin||{}).sort(function(a,b){return a.dn-b.dn;});
   var cl=objArr(trip.cl||{});
+  if(!vA&&mems.length>0&&!mems.find(function(m){return m.id===vA;}))setVA(mems[0].id);
   var me=mems.find(function(m){return m.id===vA;})||mems[0]||{id:"",name:"?",nameEn:"?",av:"?",c:"#888"};
   var myS=pSpent(trip.exps,vA);
   var totS=exps.reduce(function(s,e){return e?s+toI(e.amount||0,e.currency||"ILS"):s;},0);
@@ -361,36 +407,37 @@ function App(){
   var day=itin[sD]||itin[0]||{dn:1,dt:"",items:{}};
   var dayItems=objArr(day.items||{});
 
+  // Item costs total for current day
+  var dayCost=dayItems.reduce(function(s,it){return s+toI(it.price||0,it.priceCur||"ILS");},0);
+
+  // Map points
   var mPts=[];
   if(mD===-1){itin.forEach(function(d){objArr(d.items||{}).forEach(function(i){if(i&&i.lat&&i.lng)mPts.push(Object.assign({},i));});});}
   else if(itin[mD]){objArr(itin[mD].items||{}).forEach(function(i){if(i&&i.lat&&i.lng)mPts.push(Object.assign({},i));});}
   wl.forEach(function(w){if(w&&w.lat&&w.lng)mPts.push(Object.assign({},w,{isW:true}));});
 
-  var nav=[{k:"home",e:"🏠",l:t.home},{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"group",e:"👥",l:t.grp}];
-  var isR=ln==="he";
+  var nav=[{k:"home",e:"🏠",l:t.home},{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"more",e:"⚙️",l:t.more}];
 
   var fab=function(fn){return <button onClick={fn} style={{position:"fixed",bottom:70,left:isR?16:"auto",right:isR?"auto":16,width:50,height:50,borderRadius:14,background:"var(--cta)",color:"#fff",border:"none",boxShadow:"0 4px 16px rgba(255,107,52,.35)",cursor:"pointer",fontSize:22,display:"flex",alignItems:"center",justifyContent:"center",zIndex:50}}>+</button>;};
 
-  function shareLink(){
-    var url=window.location.origin+window.location.pathname+"?join="+trip.inv;
-    if(navigator.clipboard){navigator.clipboard.writeText(url);setCp(true);setTimeout(function(){setCp(false);},2000);}
-    if(navigator.share){navigator.share({title:"TripMate - "+(ln==="he"?trip.name:trip.nameEn),text:t.joinCode+": "+trip.inv,url:url}).catch(function(){});}
-  }
+  function shareLink(){var url=window.location.origin+window.location.pathname+"?join="+trip.inv;if(navigator.clipboard){navigator.clipboard.writeText(url);setCp(true);setTimeout(function(){setCp(false);},2000);}if(navigator.share){navigator.share({title:"TripMate",text:t.joinCode+": "+trip.inv,url:url}).catch(function(){});}}
 
   return <div style={{maxWidth:480,margin:"0 auto",minHeight:"100vh"}}>
+    {/* Header */}
     <header style={{position:"sticky",top:0,zIndex:90,background:"var(--nav)",backdropFilter:"blur(16px)",borderBottom:"1px solid var(--bd)",padding:"9px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <button onClick={function(){setAId(null);setTrip(null);}} style={{background:"var(--sf)",border:"none",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:14,color:"var(--txt)",display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>
+        <button onClick={props.onBack} style={{background:"var(--sf)",border:"none",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:14,color:"var(--txt)",display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>
         <div><h1 style={{fontSize:15,fontWeight:800,color:"var(--txt)",margin:0}}>{ln==="he"?trip.name:trip.nameEn}</h1><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{trip.sd} — {trip.ed}</p></div>
       </div>
       <div style={{display:"flex",gap:4}}>
         <button onClick={function(){setTf({name:trip.name,nameEn:trip.nameEn,sd:trip.sd,ed:trip.ed,budget:trip.budget||0});setMod("editT");}} style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"4px 7px",cursor:"pointer",fontSize:12,color:"var(--txt)"}}>✏️</button>
-        <button onClick={function(){setLn(ln==="he"?"en":"he");}} style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:10,fontWeight:600,color:"var(--txt)"}}>{ln==="he"?"EN":"עב"}</button>
+        <button onClick={function(){props.setLn(ln==="he"?"en":"he");}} style={{background:"var(--sf)",border:"1px solid var(--bd)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:10,fontWeight:600,color:"var(--txt)"}}>{ln==="he"?"EN":"עב"}</button>
       </div>
     </header>
 
     <main style={{padding:14,paddingBottom:78}}>
 
+      {/* ═══ HOME ═══ */}
       {tab==="home" && <div>
         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:10}}>
           <span style={{fontSize:10,color:"var(--mt)",fontWeight:600}}>{t.view}</span>
@@ -402,47 +449,72 @@ function App(){
           <p style={{fontSize:11,opacity:.6,margin:0,color:"#fff"}}>{t.grpB}: {money(Math.round(totS),"ILS")}</p>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginBottom:16}}>
-          {[{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"group",e:"👥",l:t.grp},{k:"wishlist",e:"❤️",l:t.wish},{k:"checklist",e:"✅",l:t.chk}].map(function(a){return <button key={a.k} onClick={function(){setTab(a.k);}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:"10px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{a.e}</span><span style={{fontSize:10,fontWeight:600,color:"var(--txt)"}}>{a.l}</span></button>;})}
+          {[{k:"itinerary",e:"📅",l:t.itin},{k:"map",e:"🗺️",l:t.map},{k:"expenses",e:"💰",l:t.exp},{k:"more",e:"👥",l:t.grp},{k:"wishlist",e:"❤️",l:t.wish},{k:"checklist",e:"✅",l:t.chk}].map(function(a){return <button key={a.k} onClick={function(){setTab(a.k);}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:"10px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><span style={{fontSize:20}}>{a.e}</span><span style={{fontSize:10,fontWeight:600,color:"var(--txt)"}}>{a.l}</span></button>;})}
         </div>
-        {itin.length>0 && <div><h3 style={{fontSize:14,fontWeight:700,color:"var(--txt)",margin:"0 0 8px"}}>{t.day} 1 — {(itin[0]||{}).dt||""}</h3>
-          {objArr((itin[0]||{}).items||{}).slice(0,3).map(function(it){if(!it)return null;return <div key={it.id||Math.random()} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6,display:"flex",alignItems:"center",gap:8,borderRight:"3px solid "+(CLR[it.type]||"#888")}}><span style={{fontSize:18}}>{EMJ[it.type]||"📌"}</span><div style={{flex:1}}><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?it.title:it.titleEn||it.title}</p><p style={{fontSize:10,color:"var(--mt)",margin:0}}>{it.time||""} · {it.location||""}</p></div></div>;})}
+        {itin.length>0 && <div>
+          <h3 style={{fontSize:14,fontWeight:700,color:"var(--txt)",margin:"0 0 8px"}}>{t.day} 1 — {(itin[0]||{}).dt||""}</h3>
+          {objArr((itin[0]||{}).items||{}).slice(0,4).map(function(it){if(!it)return null;return <div key={it.id||Math.random()} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6,display:"flex",alignItems:"center",gap:8,borderRight:"3px solid "+(CLR[it.type]||"#888")}}>
+            <span style={{fontSize:18}}>{it.transportSub?EMJ[it.transportSub]:(EMJ[it.type]||"📌")}</span>
+            <div style={{flex:1}}><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?it.title:it.titleEn||it.title}</p><p style={{fontSize:10,color:"var(--mt)",margin:0}}>{it.time||""} · {it.location||""}</p></div>
+            {it.price>0 && <span style={{fontSize:10,fontWeight:700,color:"var(--ok)"}}>{money(it.price,it.priceCur||"ILS")}</span>}
+          </div>;})}
         </div>}
       </div>}
 
+      {/* ═══ ITINERARY ═══ */}
       {tab==="itinerary" && <div>
         <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:8}}>
           {itin.map(function(d,i){return <button key={i} onClick={function(){setSd(i);}} style={{flexShrink:0,padding:"7px 15px",borderRadius:10,border:sD===i?"2px solid var(--ac)":"1px solid var(--bd)",background:sD===i?"var(--ac)":"var(--card)",color:sD===i?"#fff":"var(--txt)",cursor:"pointer"}}><div style={{fontSize:10,fontWeight:sD===i?700:500}}>{t.day} {d.dn}</div><div style={{fontSize:9,opacity:.6}}>{(d.dt||"").slice(5)}</div></button>;})}
-          <button onClick={function(){var dn=itin.length+1;var last=itin[itin.length-1];var nd="";if(last&&last.dt){var dd=new Date(last.dt);dd.setDate(dd.getDate()+1);nd=dd.toISOString().split("T")[0];}updField("itin/d"+(itin.length),{dn:dn,dt:nd,items:{}});}} style={{flexShrink:0,padding:"7px 15px",borderRadius:10,border:"2px dashed var(--bd)",background:"transparent",color:"var(--mt)",cursor:"pointer",fontSize:14}}>+</button>
+          <button onClick={function(){var dn=itin.length+1;var last=itin[itin.length-1];var nd="";if(last&&last.dt){var dd=new Date(last.dt);dd.setDate(dd.getDate()+1);nd=dd.toISOString().split("T")[0];}updF("itin/d"+(itin.length),{dn:dn,dt:nd,items:{}});}} style={{flexShrink:0,padding:"7px 15px",borderRadius:10,border:"2px dashed var(--bd)",background:"transparent",color:"var(--mt)",cursor:"pointer",fontSize:14}}>+</button>
         </div>
+
+        {/* Day cost summary */}
+        {dayCost>0 && <div style={{background:"var(--acS)",borderRadius:8,padding:"6px 10px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:10,color:"var(--mt)"}}>{t.day} {day.dn} {t.total}:</span>
+          <span style={{fontSize:12,fontWeight:700,color:"var(--ac)"}}>{money(Math.round(dayCost),"ILS")}</span>
+        </div>}
+
         {dayItems.length===0 && <p style={{textAlign:"center",padding:30,color:"var(--mt)"}}>{t.noI}</p>}
-        {dayItems.map(function(it,idx){if(!it)return null;return <div key={it.id||idx} onClick={function(){setEIt(it);setMod("editI");}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:11,padding:11,marginBottom:8,borderTop:"3px solid "+(CLR[it.type]||"#888"),cursor:"pointer"}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-            <span style={{fontSize:10,fontWeight:600,color:CLR[it.type]||"#888"}}>{EMJ[it.type]||"📌"} {(t.ty[it.type])||""} · {it.time||""}{it.endTime?" — "+it.endTime:""}</span>
-            <span style={{color:"var(--mt)",fontSize:11}}>✏️</span>
-          </div>
-          <p style={{fontSize:13,fontWeight:700,color:"var(--txt)",margin:"0 0 2px"}}>{ln==="he"?it.title:it.titleEn||it.title}</p>
-          <p style={{fontSize:10,color:"var(--mt)",margin:0}}>📍 {it.location||""}</p>
-          {it.flightNum && <span style={{fontSize:9,fontWeight:700,color:CLR.flight,background:CLR.flight+"15",padding:"1px 6px",borderRadius:4,display:"inline-block",marginTop:3}}>{it.flightNum}</span>}
-        </div>;})}
+        {dayItems.map(function(it,idx){if(!it)return null;
+          var emoji=it.transportSub?EMJ[it.transportSub]:(EMJ[it.type]||"📌");
+          var typeName=it.type==="transport"&&it.transportSub?(t.trSub[it.transportSub]||it.transportSub):(t.ty[it.type]||"");
+          return <div key={it.id||idx} onClick={function(){setEIt(it);setMod("editI");}} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:11,padding:11,marginBottom:8,borderTop:"3px solid "+(CLR[it.type]||"#888"),cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+              <span style={{fontSize:10,fontWeight:600,color:CLR[it.type]||"#888"}}>{emoji} {typeName} · {it.time||""}{it.endTime?" — "+it.endTime:""}</span>
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                {it.price>0 && <span style={{fontSize:10,fontWeight:700,color:"var(--ok)",background:"var(--ok)"+"15",padding:"1px 6px",borderRadius:5}}>{money(it.price,it.priceCur||"ILS")}</span>}
+                <span style={{color:"var(--mt)",fontSize:11}}>✏️</span>
+              </div>
+            </div>
+            <p style={{fontSize:13,fontWeight:700,color:"var(--txt)",margin:"0 0 2px"}}>{ln==="he"?it.title:it.titleEn||it.title}</p>
+            <p style={{fontSize:10,color:"var(--mt)",margin:0}}>📍 {it.location||""}</p>
+            {it.flightNum && <span style={{fontSize:9,fontWeight:700,color:CLR.flight,background:CLR.flight+"15",padding:"1px 6px",borderRadius:4,display:"inline-block",marginTop:3}}>{it.flightNum}{it.terminal?" · T"+it.terminal:""}{it.gate?" · Gate "+it.gate:""}</span>}
+            {it.checkInTime && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3,marginRight:6}}>🔑 {t.checkIn}: {it.checkInTime}</span>}
+            {it.checkOutTime && <span style={{fontSize:9,color:"#A855F7",display:"inline-block",marginTop:3}}>🚪 {t.checkOut}: {it.checkOutTime}</span>}
+            {it.transportSub && it.fromLocation && <p style={{fontSize:9,color:"var(--warn)",marginTop:3}}>{it.fromLocation} → {it.toLocation||""}</p>}
+          </div>;
+        })}
         {fab(function(){setEIt(null);setMod("addI");})}
-        <Mod open={mod==="addI"||mod==="editI"} onClose={function(){setMod(null);}} title={mod==="addI"?t.add:t.edit} ch={
+        <Mod open={mod==="addI"||mod==="editI"} onClose={function(){setMod(null);}} title={mod==="addI"?t.add+" "+t.itin:t.edit} ch={
           <IForm item={mod==="editI"?eIt:null} isEd={mod==="editI"} ln={ln}
-            onSave={function(d){var itemId=mod==="editI"&&eIt?eIt.id:xid();var item=Object.assign({},d,{id:itemId});var dayKey="d"+sD;updField("itin/"+dayKey+"/items/"+itemId,item);setMod(null);}}
-            onDel={eIt?function(){var dayKey="d"+sD;updField("itin/"+dayKey+"/items/"+eIt.id,null);setMod(null);}:null}
+            onSave={function(d){var itemId=mod==="editI"&&eIt?eIt.id:xid();var item=Object.assign({},d,{id:itemId});updF("itin/d"+sD+"/items/"+itemId,item);setMod(null);}}
+            onDel={eIt?function(){updF("itin/d"+sD+"/items/"+eIt.id,null);setMod(null);}:null}
             onCancel={function(){setMod(null);}}
           />
         } />
       </div>}
 
+      {/* ═══ MAP ═══ */}
       {tab==="map" && <div>
         <div style={{display:"flex",gap:4,overflowX:"auto",marginBottom:10}}>
           <button onClick={function(){setMD(-1);}} style={{flexShrink:0,padding:"6px 11px",borderRadius:8,border:mD===-1?"2px solid var(--ac)":"1px solid var(--bd)",background:mD===-1?"var(--ac)":"var(--card)",color:mD===-1?"#fff":"var(--txt)",cursor:"pointer",fontSize:11,fontWeight:600}}>{t.all}</button>
           {itin.map(function(_,i){return <button key={i} onClick={function(){setMD(i);}} style={{flexShrink:0,padding:"6px 11px",borderRadius:8,border:mD===i?"2px solid var(--ac)":"1px solid var(--bd)",background:mD===i?"var(--ac)":"var(--card)",color:mD===i?"#fff":"var(--txt)",cursor:"pointer",fontSize:11,fontWeight:600}}>{t.day} {i+1}</button>;})}
         </div>
         <GMap pts={mPts} ln={ln} />
-        <div style={{marginTop:10}}>{mPts.map(function(p,i){if(!p)return null;return <div key={(p.id||"")+i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 0",borderBottom:"1px solid var(--bd)"}}><span style={{width:22,height:22,borderRadius:"50%",background:p.isW?"#E84393":(CLR[p.type]||"#888"),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{p.isW?"♥":i+1}</span><div style={{flex:1}}><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?p.title:p.titleEn||p.title}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{p.location||""}</p></div></div>;})}</div>
+        <div style={{marginTop:10}}>{mPts.map(function(p,i){if(!p)return null;return <div key={(p.id||"")+i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 0",borderBottom:"1px solid var(--bd)"}}><span style={{width:22,height:22,borderRadius:"50%",background:p.isW?"#E84393":(CLR[p.type]||"#888"),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0}}>{p.isW?"♥":i+1}</span><div style={{flex:1}}><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?p.title:p.titleEn||p.title}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{p.location||""}</p></div>{p.price>0 && <span style={{fontSize:9,fontWeight:700,color:"var(--ok)"}}>{money(p.price,p.priceCur||"ILS")}</span>}</div>;})}</div>
       </div>}
 
+      {/* ═══ EXPENSES ═══ */}
       {tab==="expenses" && <div>
         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:8}}>
           <span style={{fontSize:10,color:"var(--mt)",fontWeight:600}}>{t.view}</span>
@@ -456,10 +528,10 @@ function App(){
           <button onClick={function(){setES("list");}} style={{flex:1,padding:7,borderRadius:6,border:"none",background:eS==="list"?"var(--card)":"transparent",color:eS==="list"?"var(--txt)":"var(--mt)",fontWeight:eS==="list"?700:500,fontSize:11,cursor:"pointer"}}>{t.hist}</button>
           <button onClick={function(){setES("bal");}} style={{flex:1,padding:7,borderRadius:6,border:"none",background:eS==="bal"?"var(--card)":"transparent",color:eS==="bal"?"var(--txt)":"var(--mt)",fontWeight:eS==="bal"?700:500,fontSize:11,cursor:"pointer"}}>{t.bal}</button>
         </div>
-        {eS==="list" && exps.map(function(ex){if(!ex)return null;var py=mems.find(function(m){return m.id===ex.paidBy;});return <div key={ex.id} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6}}><div style={{display:"flex",justifyContent:"space-between"}}><div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{width:26,height:26,borderRadius:"50%",background:(py&&py.c)||"#888",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700}}>{(py&&py.av)||"?"}</span><div><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?ex.desc:ex.descEn||ex.desc}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{ex.scope==="personal"?"🔒 "+t.pers:"👥 "+t.share}</p></div></div><div style={{display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:13,fontWeight:700,color:"var(--txt)"}}>{money(ex.amount||0,ex.currency||"ILS")}</span><button onClick={function(){updField("exps/"+ex.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button></div></div></div>;})}
+        {eS==="list" && exps.map(function(ex){if(!ex)return null;var py=mems.find(function(m){return m.id===ex.paidBy;});return <div key={ex.id} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6}}><div style={{display:"flex",justifyContent:"space-between"}}><div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{width:26,height:26,borderRadius:"50%",background:(py&&py.c)||"#888",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700}}>{(py&&py.av)||"?"}</span><div><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?ex.desc:ex.descEn||ex.desc}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{ex.scope==="personal"?"🔒 "+t.pers:"👥 "+t.share}</p></div></div><div style={{display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:13,fontWeight:700,color:"var(--txt)"}}>{money(ex.amount||0,ex.currency||"ILS")}</span><button onClick={function(){updF("exps/"+ex.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button></div></div></div>;})}
         {eS==="bal" && <div>
           {setts.length===0 && <p style={{textAlign:"center",padding:20,color:"var(--mt)"}}>✓ {t.ok}</p>}
-          {setts.map(function(s,i){var fr=mems.find(function(m){return m.id===s.from;});var to2=mems.find(function(m){return m.id===s.to;});return <div key={i} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:11,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:600,color:"var(--txt)"}}>{fr?(ln==="he"?fr.name:fr.nameEn):"?"} {t.owes} {to2?(ln==="he"?to2.name:to2.nameEn):"?"}</span><span style={{fontSize:14,fontWeight:800,color:"#FF6B8A"}}>{money(s.a,(exps[0]&&exps[0].currency)||"EUR")}</span></div>;})}
+          {setts.map(function(s,i){var fr=mems.find(function(m){return m.id===s.from;});var to2=mems.find(function(m){return m.id===s.to;});return <div key={i} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:11,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:600,color:"var(--txt)"}}>{fr?(ln==="he"?fr.name:fr.nameEn):"?"} {t.owes} {to2?(ln==="he"?to2.name:to2.nameEn):"?"}</span><span style={{fontSize:14,fontWeight:800,color:"var(--err)"}}>{money(s.a,(exps[0]&&exps[0].currency)||"EUR")}</span></div>;})}
         </div>}
         {fab(function(){setNe({desc:"",amount:"",currency:"EUR",paidBy:mems[0]?mems[0].id:"",splitBetween:mems.map(function(m){return m.id;}),scope:"shared"});setMod("addE");})}
         <Mod open={mod==="addE"} onClose={function(){setMod(null);}} title={t.add+" "+t.exp} ch={<div>
@@ -472,19 +544,26 @@ function App(){
             <Fld l={t.amount} ch={<Inp type="number" value={ne.amount} onChange={function(e){setNe(Object.assign({},ne,{amount:e.target.value}));}} />} />
             <Fld l={t.cur} ch={<Sel v={ne.currency} fn={function(e){setNe(Object.assign({},ne,{currency:e.target.value}));}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
           </div>
-          <Fld l={t.paid} ch={<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{mems.map(function(m){return <button key={m.id} onClick={function(){setNe(Object.assign({},ne,{paidBy:m.id}));}} style={{padding:"6px 10px",borderRadius:8,border:ne.paidBy===m.id?"2px solid "+m.c:"1px solid var(--bd)",background:ne.paidBy===m.id?m.c+"18":"var(--sf)",color:ne.paidBy===m.id?m.c:"var(--mt)",cursor:"pointer",fontWeight:600,fontSize:11}}>{ln==="he"?m.name:m.nameEn}</button>;})}</div>} />
-          <Bt ch={t.save} fn={function(){if(!ne.amount||!ne.desc)return;var eid=xid();var ex=Object.assign({},ne,{id:eid,amount:parseFloat(ne.amount),descEn:ne.desc,date:new Date().toISOString().split("T")[0],category:"attraction"});if(ex.scope==="personal")ex.splitBetween=[ex.paidBy];updField("exps/"+eid,ex);setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
+          <Fld l={t.paid} ch={<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{mems.map(function(m){return <Chip key={m.id} on={ne.paidBy===m.id} c={m.c} fn={function(){setNe(Object.assign({},ne,{paidBy:m.id}));}} ch={<span>{ln==="he"?m.name:m.nameEn}</span>} />;})}</div>} />
+          <Bt ch={t.save} fn={function(){if(!ne.amount||!ne.desc)return;var eid=xid();var ex=Object.assign({},ne,{id:eid,amount:parseFloat(ne.amount),descEn:ne.desc,date:new Date().toISOString().split("T")[0],category:"misc"});if(ex.scope==="personal")ex.splitBetween=[ex.paidBy];updF("exps/"+eid,ex);setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:8}} />
         </div>} />
       </div>}
 
-      {tab==="group" && <div>
+      {/* ═══ MORE (Group + Wish + Check + Emergency + Converter) ═══ */}
+      {tab==="more" && <div>
+        {/* Sub-tabs */}
+        <div style={{display:"flex",gap:4,overflowX:"auto",marginBottom:12}}>
+          {[{k:"group",e:"👥",l:t.grp},{k:"wishlist",e:"❤️",l:t.wish},{k:"checklist",e:"✅",l:t.chk},{k:"emergency",e:"🆘",l:t.emergency},{k:"converter",e:"💱",l:t.converter}].map(function(st){return <button key={st.k} onClick={function(){setTab(st.k);}} style={{flexShrink:0,padding:"6px 12px",borderRadius:8,background:"var(--card)",border:"1px solid var(--bd)",cursor:"pointer",fontSize:11,fontWeight:600,color:"var(--txt)"}}>{st.e} {st.l}</button>;})}
+        </div>
+
+        {/* Group */}
         <div style={{background:"linear-gradient(135deg,var(--gA),var(--gB))",borderRadius:14,padding:18,color:"#fff",marginBottom:14}}>
           <h2 style={{fontSize:17,fontWeight:800,color:"#fff",margin:"0 0 10px"}}>{ln==="he"?trip.name:trip.nameEn}</h2>
-          <div style={{background:"rgba(255,255,255,.14)",borderRadius:8,padding:"7px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{background:"rgba(255,255,255,.14)",borderRadius:8,padding:"7px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div><p style={{fontSize:8,color:"rgba(255,255,255,.5)",margin:0}}>{t.invite}</p><p style={{fontSize:15,fontWeight:800,letterSpacing:3,color:"#fff",margin:0}}>{trip.inv}</p></div>
-            <button onClick={function(){if(navigator.clipboard){navigator.clipboard.writeText(trip.inv);setCp(true);setTimeout(function(){setCp(false);},2000);}}} style={{background:"rgba(255,255,255,.2)",border:"none",borderRadius:6,padding:"4px 8px",color:"#fff",cursor:"pointer",fontSize:10,fontWeight:600}}>{cp?t.copied||"✓":t.copy}</button>
+            <button onClick={function(){if(navigator.clipboard){navigator.clipboard.writeText(trip.inv);setCp(true);setTimeout(function(){setCp(false);},2000);}}} style={{background:"rgba(255,255,255,.2)",border:"none",borderRadius:6,padding:"4px 8px",color:"#fff",cursor:"pointer",fontSize:10,fontWeight:600}}>{cp?"✓":t.copy}</button>
           </div>
-          <button onClick={shareLink} style={{width:"100%",padding:8,borderRadius:8,background:"rgba(255,255,255,.12)",border:"none",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:600}}>🔗 {t.shareLink} {cp?"✓":""}</button>
+          <button onClick={shareLink} style={{width:"100%",padding:8,borderRadius:8,background:"rgba(255,255,255,.12)",border:"none",color:"#fff",cursor:"pointer",fontSize:11,fontWeight:600}}>🔗 {t.shareLink}</button>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <h3 style={{fontSize:14,fontWeight:700,color:"var(--txt)",margin:0}}>{t.mems} ({mems.length})</h3>
@@ -493,14 +572,15 @@ function App(){
         {mems.map(function(m){return <div key={m.id} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6,display:"flex",alignItems:"center",gap:8}}>
           <span style={{width:34,height:34,borderRadius:"50%",background:m.c,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700}}>{m.av}</span>
           <div style={{flex:1}}><p style={{fontSize:13,fontWeight:700,color:"var(--txt)",margin:0}}>{ln==="he"?m.name:m.nameEn}</p><p style={{fontSize:9,color:"var(--mt)",margin:0}}>{money(Math.round(pSpent(trip.exps,m.id)),"ILS")} {t.spent}</p></div>
-          {mems.length>1 && <button onClick={function(){updField("mems/"+m.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button>}
+          {mems.length>1 && <button onClick={function(){updF("mems/"+m.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button>}
         </div>;})}
         <Mod open={mod==="addM"} onClose={function(){setMod(null);}} title={t.addM} ch={<div>
           <Fld l={t.name} ch={<Inp value={nm} onChange={function(e){setNm(e.target.value);}} />} />
-          <Bt ch={t.save} fn={function(){if(!nm)return;var mid=xid();updField("mems/"+mid,{id:mid,name:nm,nameEn:nm,av:nm.charAt(0).toUpperCase(),c:MCOL[mems.length%MCOL.length]});setMod(null);}} st={{width:"100%",justifyContent:"center"}} />
+          <Bt ch={t.save} fn={function(){if(!nm)return;var mid=xid();updF("mems/"+mid,{id:mid,name:nm,nameEn:nm,av:nm.charAt(0).toUpperCase(),c:MCOL[mems.length%MCOL.length]});setMod(null);}} st={{width:"100%",justifyContent:"center"}} />
         </div>} />
       </div>}
 
+      {/* ═══ WISHLIST ═══ */}
       {tab==="wishlist" && <div>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
           <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:0}}>❤️ {t.wish}</h2>
@@ -512,40 +592,97 @@ function App(){
             <div><p style={{fontSize:13,fontWeight:600,color:"var(--txt)",margin:0}}>{ln==="he"?w.title:w.titleEn||w.title}</p><p style={{fontSize:10,color:"var(--mt)",margin:"2px 0 0"}}>📍 {w.location||""}</p></div>
             <div style={{display:"flex",gap:3}}>
               <button onClick={function(){setMvW(mvW===w.id?null:w.id);}} style={{background:"var(--acS)",border:"none",borderRadius:5,padding:"3px 7px",cursor:"pointer",color:"var(--ac)",fontSize:9,fontWeight:600}}>{t.move}</button>
-              <button onClick={function(){updField("wl/"+w.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button>
+              <button onClick={function(){updF("wl/"+w.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:12}}>🗑</button>
             </div>
           </div>
           {mvW===w.id && <div style={{display:"flex",gap:4,marginTop:7,paddingTop:7,borderTop:"1px solid var(--bd)",flexWrap:"wrap"}}>
-            {itin.map(function(d,i){return <button key={i} onClick={function(){var itemId=xid();var item=Object.assign({},w,{id:itemId,time:"",endTime:""});updField("itin/d"+i+"/items/"+itemId,item);updField("wl/"+w.id,null);setMvW(null);}} style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--bd)",background:"var(--sf)",cursor:"pointer",fontSize:10,fontWeight:600,color:"var(--txt)"}}>{t.day} {d.dn}</button>;})}
+            {itin.map(function(d,i){return <button key={i} onClick={function(){var itemId=xid();updF("itin/d"+i+"/items/"+itemId,Object.assign({},w,{id:itemId,time:"",endTime:""}));updF("wl/"+w.id,null);setMvW(null);}} style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--bd)",background:"var(--sf)",cursor:"pointer",fontSize:10,fontWeight:600,color:"var(--txt)"}}>{t.day} {d.dn}</button>;})}
           </div>}
         </div>;})}
         <Mod open={mod==="addW"} onClose={function(){setMod(null);}} title={t.addW} ch={<div>
-          <Fld l={t.title} ch={<Inp value={ln==="he"?nw.title:nw.titleEn} onChange={function(e){if(ln==="he")setNw(Object.assign({},nw,{title:e.target.value,titleEn:e.target.value}));else setNw(Object.assign({},nw,{titleEn:e.target.value,title:e.target.value}));}} />} />
-          <Fld l={"📍 "+t.loc} ch={<div>
-            <PlIn val={nw.location} ph={t.search} onPick={function(loc){setNw(Object.assign({},nw,loc));}} />
-            {nw.lat!==0 && <p style={{fontSize:9,color:"var(--ac)",marginTop:3}}>✓ {nw.location}</p>}
-          </div>} />
-          <Bt ch={t.save} fn={function(){if(!nw.title&&!nw.titleEn)return;var wid=xid();updField("wl/"+wid,Object.assign({},nw,{id:wid,type:"attraction"}));setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:6}} />
+          <Fld l={t.title} ch={<Inp value={ln==="he"?nw.title:nw.titleEn} onChange={function(e){var v=e.target.value;if(ln==="he")setNw(Object.assign({},nw,{title:v,titleEn:v}));else setNw(Object.assign({},nw,{titleEn:v,title:v}));}} />} />
+          <Fld l={"📍 "+t.loc} ch={<PlIn val={nw.location} ph={t.search} onPick={function(loc){setNw(Object.assign({},nw,loc));}} />} />
+          <Bt ch={t.save} fn={function(){if(!nw.title&&!nw.titleEn)return;var wid=xid();updF("wl/"+wid,Object.assign({},nw,{id:wid,type:"attraction"}));setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:6}} />
         </div>} />
       </div>}
 
+      {/* ═══ CHECKLIST (enhanced) ═══ */}
       {tab==="checklist" && <div>
-        <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:"0 0 10px"}}>✅ {t.chk}</h2>
-        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:0}}>✅ {t.chk}</h2>
+          <Bt ch={"+ "+t.addItem} fn={function(){setNci({text:"",textEn:"",cat:"misc",qty:1});setMod("addCl");}} st={{padding:"5px 10px",fontSize:10}} />
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:8}}>
           <span style={{fontSize:10,color:"var(--mt)",fontWeight:600}}>{t.view}</span>
           {mems.map(function(m){return <button key={m.id} onClick={function(){setVA(m.id);}} style={{width:22,height:22,borderRadius:"50%",border:vA===m.id?"2px solid "+m.c:"2px solid transparent",background:m.c,color:"#fff",fontSize:8,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{m.av}</button>;})}
         </div>
-        {cl.map(function(c){if(!c)return null;var ck=c.ck&&c.ck[vA];return <button key={c.id} onClick={function(){var path="cl/"+c.id+"/ck/"+vA;updField(path,!ck);}} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--card)",border:"1px solid var(--bd)",borderRadius:8,marginBottom:5,cursor:"pointer",textAlign:"inherit"}}>
-          <span style={{width:22,height:22,borderRadius:6,border:"2px solid "+(ck?"#36D6A0":"var(--bd)"),background:ck?"#36D6A0":"transparent",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0}}>{ck?"✓":""}</span>
-          <span style={{fontSize:13,color:ck?"var(--mt)":"var(--txt)",textDecoration:ck?"line-through":"none"}}>{ln==="he"?c.he:c.en}</span>
-        </button>;})}
+        {/* Category filter */}
+        <div style={{display:"flex",gap:4,overflowX:"auto",marginBottom:10}}>
+          <Chip on={clCat==="all"} c="var(--ac)" fn={function(){setClCat("all");}} ch={<span>{t.all}</span>} />
+          {CL_CATS.map(function(cat){return <Chip key={cat} on={clCat===cat} c="var(--ac)" fn={function(){setClCat(cat);}} ch={<span>{CL_CAT_E[cat]} {ln==="he"?CL_CAT_HE[cat]:CL_CAT_EN[cat]}</span>} />;})}
+        </div>
+        {cl.filter(function(c){return c&&(clCat==="all"||c.cat===clCat);}).map(function(c){if(!c)return null;var ck=c.ck&&c.ck[vA];
+          return <div key={c.id} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",background:"var(--card)",border:"1px solid var(--bd)",borderRadius:8,marginBottom:5}}>
+            <button onClick={function(){updF("cl/"+c.id+"/ck/"+vA,!ck);}} style={{width:22,height:22,borderRadius:6,border:"2px solid "+(ck?"var(--ok)":"var(--bd)"),background:ck?"var(--ok)":"transparent",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,flexShrink:0,cursor:"pointer"}}>{ck?"✓":""}</button>
+            <div style={{flex:1}}>
+              <span style={{fontSize:13,color:ck?"var(--mt)":"var(--txt)",textDecoration:ck?"line-through":"none"}}>{ln==="he"?c.text:c.textEn||c.text}</span>
+              {c.qty>1 && <span style={{fontSize:10,color:"var(--warn)",marginRight:6,marginLeft:6}}>×{c.qty}</span>}
+              <span style={{fontSize:9,color:"var(--mt)"}}>{CL_CAT_E[c.cat]||"📦"}</span>
+            </div>
+            <button onClick={function(){updF("cl/"+c.id,null);}} style={{background:"none",border:"none",color:"var(--mt)",cursor:"pointer",opacity:.3,fontSize:11}}>🗑</button>
+          </div>;
+        })}
+        <Mod open={mod==="addCl"} onClose={function(){setMod(null);}} title={t.addItem} ch={<div>
+          <Fld l={ln==="he"?"פריט":"Item"} ch={<Inp value={ln==="he"?nci.text:nci.textEn} onChange={function(e){var v=e.target.value;if(ln==="he")setNci(Object.assign({},nci,{text:v,textEn:v}));else setNci(Object.assign({},nci,{textEn:v,text:v}));}} />} />
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Fld l={t.qty} ch={<Inp type="number" value={nci.qty} onChange={function(e){setNci(Object.assign({},nci,{qty:parseInt(e.target.value)||1}));}} />} />
+            <Fld l={t.cat} ch={<Sel v={nci.cat} fn={function(e){setNci(Object.assign({},nci,{cat:e.target.value}));}} ops={CL_CATS.map(function(c){return{v:c,l:(ln==="he"?CL_CAT_HE[c]:CL_CAT_EN[c])+" "+CL_CAT_E[c]};})} />} />
+          </div>
+          <Bt ch={t.save} fn={function(){if(!nci.text&&!nci.textEn)return;var cid=xid();updF("cl/"+cid,{id:cid,text:nci.text,textEn:nci.textEn,cat:nci.cat,qty:nci.qty,ck:{}});setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:6}} />
+        </div>} />
       </div>}
+
+      {/* ═══ EMERGENCY ═══ */}
+      {tab==="emergency" && <div>
+        <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:"0 0 6px"}}>🆘 {t.emergency}</h2>
+        <p style={{fontSize:11,color:"var(--mt)",marginBottom:12}}>{t.emDesc}</p>
+        {["police","ambulance","embassy","insurance"].map(function(k){
+          var val=(trip.emergency&&trip.emergency[k])||"";
+          return <div key={k} style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:10,padding:10,marginBottom:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:16}}>{k==="police"?"🚔":k==="ambulance"?"🚑":k==="embassy"?"🏛️":"🛡️"}</span>
+                <div><p style={{fontSize:12,fontWeight:600,color:"var(--txt)",margin:0}}>{t[k]}</p>{val && <a href={"tel:"+val} style={{fontSize:13,fontWeight:700,color:"var(--ac)",textDecoration:"none"}}>{val}</a>}</div>
+              </div>
+              <button onClick={function(){var num=prompt(t[k]+":",val);if(num!==null)updF("emergency/"+k,num);}} style={{background:"var(--sf)",border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",fontSize:10,color:"var(--ac)"}}>✏️</button>
+            </div>
+          </div>;
+        })}
+      </div>}
+
+      {/* ═══ CONVERTER ═══ */}
+      {tab==="converter" && <div>
+        <h2 style={{fontSize:16,fontWeight:700,color:"var(--txt)",margin:"0 0 12px"}}>💱 {t.converter}</h2>
+        <Fld l={t.amount} ch={<Inp type="number" value={cvAmt} onChange={function(e){setCvAmt(e.target.value);}} style={{fontSize:18,fontWeight:700,textAlign:"center"}} />} />
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+          <Fld l={"From"} ch={<Sel v={cvFrom} fn={function(e){setCvFrom(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
+          <Fld l={"To"} ch={<Sel v={cvTo} fn={function(e){setCvTo(e.target.value);}} ops={CURS.map(function(c){return{v:c,l:c};})} />} />
+        </div>
+        {cvAmt && <div style={{background:"var(--card)",border:"1px solid var(--bd)",borderRadius:12,padding:16,textAlign:"center"}}>
+          <p style={{fontSize:12,color:"var(--mt)",margin:"0 0 4px"}}>{t.result}</p>
+          <p style={{fontSize:28,fontWeight:800,color:"var(--ac)",margin:0}}>{money(Math.round(parseFloat(cvAmt)*toI(1,cvFrom)/toI(1,cvTo)*100)/100,cvTo)}</p>
+          <p style={{fontSize:10,color:"var(--mt)",marginTop:4}}>{t.rate}: 1 {cvFrom} = {(toI(1,cvFrom)/toI(1,cvTo)).toFixed(4)} {cvTo}</p>
+        </div>}
+      </div>}
+
     </main>
 
+    {/* Nav */}
     <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"var(--nav)",backdropFilter:"blur(16px)",borderTop:"1px solid var(--bd)",display:"flex",justifyContent:"space-around",padding:"6px 0 env(safe-area-inset-bottom,6px)"}}>
       {nav.map(function(n){return <button key={n.k} onClick={function(){setTab(n.k);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,background:"none",border:"none",cursor:"pointer",padding:"5px 12px",color:tab===n.k?"var(--ac)":"var(--mt)"}}><span style={{fontSize:20}}>{n.e}</span><span style={{fontSize:9,fontWeight:tab===n.k?700:500}}>{n.l}</span>{tab===n.k && <span style={{width:4,height:4,borderRadius:"50%",background:"var(--ac)"}} />}</button>;})}
     </nav>
 
+    {/* Edit Trip */}
     <Mod open={mod==="editT"} onClose={function(){setMod(null);}} title={t.editT} ch={<div>
       <Fld l={t.tName} ch={<Inp value={ln==="he"?tf.name:tf.nameEn} onChange={function(e){if(ln==="he")setTf(Object.assign({},tf,{name:e.target.value}));else setTf(Object.assign({},tf,{nameEn:e.target.value}));}} />} />
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -553,22 +690,16 @@ function App(){
         <Fld l={t.stop} ch={<Inp type="date" value={tf.ed} onChange={function(e){setTf(Object.assign({},tf,{ed:e.target.value}));}} />} />
       </div>
       <Fld l={t.budget+" (₪)"} ch={<Inp type="number" value={tf.budget||0} onChange={function(e){setTf(Object.assign({},tf,{budget:parseFloat(e.target.value)||0}));}} />} />
-      <Bt ch={t.save} fn={function(){var updates={name:tf.name||trip.name,nameEn:tf.nameEn||trip.nameEn,sd:tf.sd||trip.sd,ed:tf.ed||trip.ed,budget:tf.budget||0};fbDB.ref("trips/"+aId).update(updates);fbDB.ref("userTrips/"+myUid+"/"+aId).update({name:updates.name,nameEn:updates.nameEn});setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:6}} />
+      <Bt ch={t.save} fn={function(){fbDB.ref("trips/"+aId).update({name:tf.name||trip.name,nameEn:tf.nameEn||trip.nameEn,sd:tf.sd||trip.sd,ed:tf.ed||trip.ed,budget:tf.budget||0});fbDB.ref("userTrips/"+props.myUid+"/"+aId).update({name:tf.name||trip.name,nameEn:tf.nameEn||trip.nameEn});setMod(null);}} st={{width:"100%",justifyContent:"center",marginTop:6}} />
     </div>} />
   </div>;
 }
 
-// ── Check for join link ──
-var params = new URLSearchParams(window.location.search);
-var joinCode = params.get("join");
+// ── Check for join link in URL ──
+var params=new URLSearchParams(window.location.search);
+var joinParam=params.get("join");
 
-function Root(){
-  var _jc=useState(joinCode),pendingJoin=_jc[0],setPJ=_jc[1];
-  // Will be handled inside App after auth
-  return <App />;
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
 </html>
